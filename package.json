@@ -1,0 +1,28 @@
+{
+  "name": "portal-flota-municipal",
+  "version": "1.0.0",
+  "description": "Capstone Project: Municipal Fleet Management Portal",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kay9876/portal-flota-municipal.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Kay9876/portal-flota-municipal/issues"
+  },
+  "homepage": "https://github.com/Kay9876/portal-flota-municipal#readme",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.3",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "parcel": "^2.16.4"
+  }
+}

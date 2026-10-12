@@ -2,9 +2,10 @@
   "name": "portal-flota-municipal",
   "version": "1.0.0",
   "description": "Capstone Project: Municipal Fleet Management Portal",
-  "main": "index.js",
+  "source": "src/index.html",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "parcel",
+    "build": "parcel build"
   },
   "repository": {
     "type": "git",
@@ -23,6 +24,7 @@
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
+    "buffer": "^6.0.3",
     "parcel": "^2.16.4"
   }
 }

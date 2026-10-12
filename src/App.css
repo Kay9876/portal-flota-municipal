@@ -1,0 +1,167 @@
+:root {
+  --navy: #0f2a4a;
+  --blue: #1d5fa8;
+  --blue-light: #e8f1fb;
+  --green: #1f8a4c;
+  --red: #c0392b;
+  --gray: #5b6675;
+  --border: #dde3ea;
+  --bg: #f4f6f9;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: #1b2430;
+}
+
+/* ---------- Login ---------- */
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--navy), var(--blue));
+  padding: 16px;
+}
+.login-card {
+  background: #fff;
+  width: 100%;
+  max-width: 400px;
+  border-radius: 14px;
+  padding: 32px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}
+.brand { text-align: center; margin-bottom: 24px; }
+.brand-icon { font-size: 2.5rem; }
+.brand h1 { margin: 8px 0 4px; font-size: 1.4rem; color: var(--navy); }
+.brand p { margin: 0; color: var(--gray); font-size: 0.9rem; }
+
+/* ---------- Formularios ---------- */
+.field { display: grid; gap: 6px; margin-bottom: 14px; font-size: 0.9rem; font-weight: 600; }
+.field input, .field select {
+  padding: 10px 12px;
+  font-size: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-weight: 400;
+}
+.field input:focus, .field select:focus {
+  outline: 3px solid var(--blue-light);
+  border-color: var(--blue);
+}
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.btn {
+  width: 100%;
+  padding: 11px;
+  font-size: 1rem;
+  font-weight: 600;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--blue);
+  color: #fff;
+}
+.btn:hover { background: var(--navy); }
+.btn-link {
+  background: none;
+  border: 0;
+  color: var(--blue);
+  cursor: pointer;
+  margin-top: 12px;
+  width: 100%;
+  font-size: 0.9rem;
+}
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.msg { padding: 10px; border-radius: 8px; font-size: 0.9rem; margin-top: 12px; }
+.msg.error { background: #fdecea; color: var(--red); }
+.msg.ok { background: #e6f4ec; color: var(--green); }
+
+/* ---------- Dashboard ---------- */
+.topbar {
+  background: var(--navy);
+  color: #fff;
+  padding: 14px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.topbar h1 { margin: 0; font-size: 1.15rem; }
+.topbar .user { display: flex; align-items: center; gap: 12px; font-size: 0.9rem; }
+.badge {
+  background: #f5b700;
+  color: #1b2430;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.container { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.stat {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  border-left: 5px solid var(--blue);
+}
+.stat.green { border-left-color: var(--green); }
+.stat.red { border-left-color: var(--red); }
+.stat.navy { border-left-color: var(--navy); }
+.stat .label { color: var(--gray); font-size: 0.85rem; }
+.stat .value { font-size: 2rem; font-weight: 700; margin-top: 4px; }
+
+.grid { display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start; }
+@media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+
+.card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+.card h2 { margin: 0 0 16px; font-size: 1.1rem; color: var(--navy); }
+
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+th {
+  text-align: left;
+  color: var(--gray);
+  font-weight: 600;
+  padding: 10px 8px;
+  border-bottom: 2px solid var(--border);
+}
+td { padding: 12px 8px; border-bottom: 1px solid var(--border); }
+tr:hover td { background: #fafbfd; }
+.plate {
+  font-family: monospace;
+  font-weight: 700;
+  background: var(--blue-light);
+  color: var(--navy);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+.pill { font-size: 0.75rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
+.pill.on { background: #e6f4ec; color: var(--green); }
+.pill.off { background: #fdecea; color: var(--red); }
+.empty { text-align: center; color: var(--gray); padding: 40px 0; }
+.table-wrap { overflow-x: auto; }

@@ -1,0 +1,4 @@
+Aqui el admin (personal de IT Department) puede ver todos los usuarios
+que están registrados en el sistema. También puede seleccionar editarlos o
+añadir uno nuevo. Estas opciones transferirían al admin a las páginas de 
+editUser y createUser, respectivamente

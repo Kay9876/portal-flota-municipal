@@ -198,6 +198,8 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
+import './App.css'
+import Homepage from './Screens/homepage'
 
 function Login() {
   const [email, setEmail] = useState('')
@@ -323,10 +325,14 @@ export default function App() {
     return () => data.subscription.unsubscribe()
   }, [])
 
-  return (
-    <div>
-      <h1>Flota Municipal — Vega Alta</h1>
-      {session ? <Home session={session} /> : <Login />}
-    </div>
-  )
+  // return session ? (
+  //   <Homepage
+  //     user={session.user}
+  //     onSignOut={() => supabase.auth.signOut()}
+  //   />
+  // ) : (
+  //   <Login />
+  // )
+
+  return <Homepage user={{ email: 'tester@gm.com', user_metadata: { first_name: 'Test User', is_admin: true } }} onSignOut={() => {}} />
 }

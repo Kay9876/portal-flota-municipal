@@ -325,14 +325,16 @@ export default function App() {
     return () => data.subscription.unsubscribe()
   }, [])
 
-  // return session ? (
-  //   <Homepage
-  //     user={session.user}
-  //     onSignOut={() => supabase.auth.signOut()}
-  //   />
-  // ) : (
-  //   <Login />
-  // )
+  return session ? (
+    <Homepage
+      user={session.user}
+      onSignOut={() => supabase.auth.signOut()}
+    />
+  ) : (
+    <Login />
+  )
 
-  return <Homepage user={{ email: 'tester@gm.com', user_metadata: { first_name: 'Test User', is_admin: true } }} onSignOut={() => {}} />
+  // For testing purposes, we can return the Homepage component directly with a test user 
+
+  // return <Homepage user={{ email: 'tester@gm.com', user_metadata: { first_name: 'Test User', is_admin: true } }} onSignOut={() => {}} />
 }

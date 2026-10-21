@@ -200,49 +200,50 @@ import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
 import './App.css'
 import Homepage from './Screens/homepage'
+import LoginPage from './Screens/loginPage'
 
-function Login() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
-  const [isSignup, setIsSignup] = useState(false)
-  const [msg, setMsg] = useState('')
+// function Login() {
+//   const [email, setEmail] = useState('')
+//   const [password, setPassword] = useState('')
+//   const [firstName, setFirstName] = useState('')
+//   const [lastName, setLastName] = useState('')
+//   const [isSignup, setIsSignup] = useState(false)
+//   const [msg, setMsg] = useState('')
 
-  async function handleSubmit(e) {
-    e.preventDefault()
-    setMsg('')
-    const { error } = isSignup
-      ? await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { first_name: firstName, last_name: lastName } },
-        })
-      : await supabase.auth.signInWithPassword({ email, password })
-    if (error) setMsg(error.message)
-  }
+//   async function handleSubmit(e) {
+//     e.preventDefault()
+//     setMsg('')
+//     const { error } = isSignup
+//       ? await supabase.auth.signUp({
+//           email,
+//           password,
+//           options: { data: { first_name: firstName, last_name: lastName } },
+//         })
+//       : await supabase.auth.signInWithPassword({ email, password })
+//     if (error) setMsg(error.message)
+//   }
 
-  return (
-    <form onSubmit={handleSubmit}>
-      <h2>{isSignup ? 'Crear cuenta' : 'Iniciar sesión'}</h2>
+//   return (
+//     <form onSubmit={handleSubmit}>
+//       <h2>{isSignup ? 'Crear cuenta' : 'Iniciar sesión'}</h2>
 
-      {isSignup && (
-        <>
-          <input placeholder="Nombre" value={firstName} onChange={e => setFirstName(e.target.value)} required />
-          <input placeholder="Apellido" value={lastName} onChange={e => setLastName(e.target.value)} required />
-        </>
-      )}
-      <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required />
-      <input type="password" placeholder="Contraseña (mín. 6)" value={password} onChange={e => setPassword(e.target.value)} required />
+//       {isSignup && (
+//         <>
+//           <input placeholder="Nombre" value={firstName} onChange={e => setFirstName(e.target.value)} required />
+//           <input placeholder="Apellido" value={lastName} onChange={e => setLastName(e.target.value)} required />
+//         </>
+//       )}
+//       <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required />
+//       <input type="password" placeholder="Contraseña (mín. 6)" value={password} onChange={e => setPassword(e.target.value)} required />
 
-      <button type="submit">{isSignup ? 'Crear cuenta' : 'Entrar'}</button>
-      <button type="button" onClick={() => setIsSignup(!isSignup)}>
-        {isSignup ? 'Ya tengo cuenta' : 'Crear cuenta nueva'}
-      </button>
-      <p>{msg}</p>
-    </form>
-  )
-}
+//       <button type="submit">{isSignup ? 'Crear cuenta' : 'Entrar'}</button>
+//       <button type="button" onClick={() => setIsSignup(!isSignup)}>
+//         {isSignup ? 'Ya tengo cuenta' : 'Crear cuenta nueva'}
+//       </button>
+//       <p>{msg}</p>
+//     </form>
+//   )
+// }
 
 const emptyForm = { department_id: '', manufacturer: '', model: '', year: '', license_plate: '' }
 
@@ -331,7 +332,7 @@ export default function App() {
       onSignOut={() => supabase.auth.signOut()}
     />
   ) : (
-    <Login />
+    <LoginPage />
   )
 
   // For testing purposes, we can return the Homepage component directly with a test user 

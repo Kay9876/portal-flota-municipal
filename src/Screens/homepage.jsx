@@ -1,7 +1,7 @@
 // En esta pagina todos tendrán acceso al dashboard e información general
 // accesible para todos, pero tendrán información distinta expuesta dependiente
 // de los permisos que tenga el usuario
-
+import {useState} from 'react'
 import {
   CarFront,
   Car,
@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 
 import escudoLogo from '../assets/escudoVA.png'
-
+import AddVehicle from './addVehicle'
 const vehicleStats = [
   { label: 'Total de vehículos', value: '# would be in these sections', Icon: CarFront, color: 'navy' },
   { label: 'En uso', value: '-', Icon: Car, color: 'green' },
@@ -52,7 +52,7 @@ const sidebarItems = [
 export default function Homepage({ user, onSignOut }) {
   const firstName = user?.user_metadata?.first_name || user?.email || 'Usuario'
   const roleLabel = user?.user_metadata?.is_admin ? 'Administrador' : 'Usuario'
-
+  const [showAddVehicle, setShowAddVehicle] = useState(false)
   return (
     <div className="app-layout">
       <aside className="sidebar">
@@ -115,6 +115,10 @@ export default function Homepage({ user, onSignOut }) {
         </header>
 
         <section className="page-content">
+          {showAddVehicle ? (
+            <AddVehicle onDone={() => setShowAddVehicle(false)} />
+          ) : (
+            <>
           <div className="section-heading">
             <h1>Resumen de la Flota</h1>
             <span>Fecha would be here</span>
@@ -158,6 +162,15 @@ export default function Homepage({ user, onSignOut }) {
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => setShowAddVehicle(true)}
+          >
+            Agregar Vehículo
+          </button>
+          </>
+          )}
         </section>
       </main>
     </div>

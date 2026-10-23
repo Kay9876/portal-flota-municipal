@@ -22,6 +22,8 @@ import {
 
 import escudoLogo from '../assets/escudoVA.png'
 import AddVehicle from './addVehicle'
+import ViewVehicles from './viewVehicles'
+
 const vehicleStats = [
   { label: 'Total de vehículos', value: '# would be in these sections', Icon: CarFront, color: 'navy' },
   { label: 'En uso', value: '-', Icon: Car, color: 'green' },
@@ -53,6 +55,7 @@ export default function Homepage({ user, onSignOut }) {
   const firstName = user?.user_metadata?.first_name || user?.email || 'Usuario'
   const roleLabel = user?.user_metadata?.is_admin ? 'Administrador' : 'Usuario'
   const [showAddVehicle, setShowAddVehicle] = useState(false)
+  const [showVehicles, setShowVehicles] = useState(false)
   return (
     <div className="app-layout">
       <aside className="sidebar">
@@ -81,17 +84,28 @@ export default function Homepage({ user, onSignOut }) {
         </div>
 
         <nav className="sidebar-nav" aria-label="Navegación principal">
-          {sidebarItems.map(({ label, Icon }, index) => (
-            <a
-              href="#"
-              key={label}
-              className={index === 0 ? 'active' : ''}
-            >
-              <span className="nav-icon"><Icon size={28} strokeWidth={2} /></span>
-              <span>{label}</span>
-            </a>
-          ))}
+          {sidebarItems.map(({ label, Icon }) => {
+            const isActive =
+              (label === 'Inicio' && !showVehicles && !showAddVehicle) ||
+              (label === 'Vehículos' && (showVehicles || showAddVehicle))
+            return (
+              <a
+                href="#"
+                key={label}
+                className={isActive ? 'active' : ''}
+                onClick={(e) => {
+                  e.preventDefault()
+                  if (label === 'Inicio') { setShowVehicles(false); setShowAddVehicle(false) }
+                  if (label === 'Vehículos') { setShowVehicles(true); setShowAddVehicle(false) }
+                }}
+              >
+                <span className="nav-icon"><Icon size={28} strokeWidth={2} /></span>
+                <span>{label}</span>
+              </a>
+            )
+          })}
         </nav>
+
       </aside>
 
       <main className="main-content">
@@ -115,7 +129,9 @@ export default function Homepage({ user, onSignOut }) {
         </header>
 
         <section className="page-content">
-          {showAddVehicle ? (
+          {showVehicles ? (
+            <ViewVehicles />
+          ) : showAddVehicle ? (
             <AddVehicle onDone={() => setShowAddVehicle(false)} />
           ) : (
             <>

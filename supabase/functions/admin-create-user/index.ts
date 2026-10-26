@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
   })
   if (createError || !created.user) return respond({ error: createError?.message || 'No se pudo crear la cuenta.' }, 400)
 
-  const { error: insertError } = await adminClient.from('profiles').insert({
+  const { data: updatedProfile, error: insertError } = await adminClient.from('profiles').update({
     id: created.user.id,
     first_name,
     last_name: typeof body.last_name === 'string' ? body.last_name.trim() || null : null,
@@ -66,12 +66,37 @@ Deno.serve(async (req) => {
     is_global_viewer: body.is_global_viewer === true,
     is_active: body.is_active !== false,
   })
-  if (insertError) {
+    .eq('id', created.user.id)
+    .select('id')
+    .maybeSingle()
+  if (insertError || !updatedProfile) {
     // Roll back the Auth account if the profile could not be created.
     await adminClient.auth.admin.deleteUser(created.user.id)
-    return respond({ error: `No se pudo guardar el perfil: ${insertError.message}` }, 400)
+    return respond(
+      {
+        error: `No se pudo guardar el perfil: ${
+          insertError?.message ?? 'No se encontró el perfil creado.'
+        }`,
+      }, 400)
   }
-
+  const canView = body.can_view_vehicle === true
+  const canCreate = body.can_create_vehicle === true
+  const canUpdate = body.can_update_vehicle === true
+  if (departmentId !== null && (canView || canCreate || canUpdate)) {
+    const { error: permissionError } = await adminClient.from('user_permissions').insert({
+      user_id: created.user.id,
+      department_id: departmentId,
+      can_view_vehicle: canView,
+      can_create_vehicle: canCreate,
+      can_update_vehicle: canUpdate,
+      granted_by: authData.user.id,
+    })
+    if (permissionError) {
+      await adminClient.from('profiles').delete().eq('id', created.user.id)
+      await adminClient.auth.admin.deleteUser(created.user.id)
+      return respond({ error: `No se pudieron guardar los permisos: ${permissionError.message}` }, 400)
+    }
+  }
   return respond({ user_id: created.user.id, message: 'Usuario creado.' }, 200)
 
 })

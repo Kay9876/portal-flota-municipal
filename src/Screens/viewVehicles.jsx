@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlertCircle, CarFront, Loader2, Search } from 'lucide-react'
+import { AlertCircle, CarFront, Loader2, Plus, Search } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import './viewVehicles.css'
 import carPlaceholder from 'url:../assets/carplaceholder.png'
+import AddVehicle from './addVehicle'
 
 const PHOTO_BUCKET = 'vehicle-photos'
 
@@ -13,6 +14,9 @@ export default function ViewVehicles() {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [departmentId, setDepartmentId] = useState('')
+  const [adding, setAdding] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
+  const [canCreate, setCanCreate] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -45,7 +49,36 @@ export default function ViewVehicles() {
 
     load()
     return () => { cancelled = true }
+  }, [reloadKey])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadCanCreate() {
+      const { data: { session } } = await supabase.auth.getSession()
+      const uid = session?.user?.id
+      if (!uid) return
+
+      const [perm, prof] = await Promise.all([
+        supabase
+          .from('user_permissions')
+          .select('id')
+          .eq('user_id', uid)
+          .eq('can_create_vehicle', true)
+          .limit(1),
+        supabase.from('profiles').select('is_admin').eq('id', uid).maybeSingle(),
+      ])
+      if (cancelled) return
+      const hasPermission = (perm.data?.length ?? 0) > 0
+      const isAdmin = prof.data?.is_admin === true // quita esta línea y el "|| isAdmin" si solo quieres can_create_vehicle
+      setCanCreate(hasPermission || isAdmin)
+    }
+
+    loadCanCreate()
+    return () => { cancelled = true }
   }, [])
+
+
 
   const deptName = (v) => v.departments?.name ?? `Departamento ${v.department_id}`
 
@@ -67,6 +100,17 @@ export default function ViewVehicles() {
     })
   }, [vehicles, search, departmentId])
 
+  if (adding) {
+    return (
+      <AddVehicle
+        onDone={() => {
+          setAdding(false)
+          setReloadKey((k) => k + 1)
+        }}
+      />
+    )
+  }
+
   return (
     <div className="vv">
       <div className="vv-heading">
@@ -74,9 +118,17 @@ export default function ViewVehicles() {
           <h1>Vehículos</h1>
           <p>Flota municipal registrada en el sistema.</p>
         </div>
-        <span className="vv-count" aria-live="polite">
-          {loading ? 'Cargando…' : `${visible.length} de ${vehicles.length} vehículos`}
-        </span>
+        <div className="vv-heading-actions">
+          <span className="vv-count" aria-live="polite">
+            {loading ? 'Cargando…' : `${visible.length} de ${vehicles.length} vehículos`}
+          </span>
+          {canCreate && (
+            <button type="button" className="vv-btn vv-btn-primary" onClick={() => setAdding(true)}>
+              <Plus size={18} aria-hidden="true" />
+              Agregar vehículo
+            </button>
+          )}
+        </div>
       </div>
 
       <section className="vv-card">

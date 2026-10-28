@@ -141,6 +141,17 @@
 .vv-pill-on { background: var(--vv-green-bg); color: var(--vv-green); }
 .vv-pill-off { background: var(--vv-red-bg); color: var(--vv-red); }
 
+.vv-table tbody tr:hover td { background: #f8fafc; }
+
+.vv-clickable-row {
+  cursor: pointer;
+}
+
+.vv-clickable-row:focus-visible {
+  outline: 2px solid var(--vv-navy);
+  outline-offset: -2px;
+}
+
 /* Mensajes y estados */
 .vv-alert {
   display: flex;

@@ -23,7 +23,7 @@ import {
 import escudoLogo from '../assets/escudoVA.png'
 import AddVehicle from './addVehicle'
 import ViewVehicles from './viewVehicles'
-
+import ViewVehicleInfo from './viewVehicleInfo'
 const vehicleStats = [
   { label: 'Total de vehículos', value: '# would be in these sections', Icon: CarFront, color: 'navy' },
   { label: 'En uso', value: '-', Icon: Car, color: 'green' },
@@ -56,6 +56,7 @@ export default function Homepage({ user, onSignOut }) {
   const roleLabel = user?.user_metadata?.is_admin ? 'Administrador' : 'Usuario'
   const [showAddVehicle, setShowAddVehicle] = useState(false)
   const [showVehicles, setShowVehicles] = useState(false)
+  const [selectedVehicleId, setSelectedVehicleId] = useState(null)
   return (
     <div className="app-layout">
       <aside className="sidebar">
@@ -86,8 +87,8 @@ export default function Homepage({ user, onSignOut }) {
         <nav className="sidebar-nav" aria-label="Navegación principal">
           {sidebarItems.map(({ label, Icon }) => {
             const isActive =
-              (label === 'Inicio' && !showVehicles && !showAddVehicle) ||
-              (label === 'Vehículos' && (showVehicles || showAddVehicle))
+              (label === 'Inicio' && !showVehicles && !showAddVehicle && selectedVehicleId === null) ||
+              (label === 'Vehículos' && (showVehicles || showAddVehicle || selectedVehicleId !== null))
             return (
               <a
                 href="#"
@@ -95,8 +96,8 @@ export default function Homepage({ user, onSignOut }) {
                 className={isActive ? 'active' : ''}
                 onClick={(e) => {
                   e.preventDefault()
-                  if (label === 'Inicio') { setShowVehicles(false); setShowAddVehicle(false) }
-                  if (label === 'Vehículos') { setShowVehicles(true); setShowAddVehicle(false) }
+                    if (label === 'Inicio') { setShowVehicles(false); setShowAddVehicle(false); setSelectedVehicleId(null) }
+                    if (label === 'Vehículos') { setShowVehicles(true); setShowAddVehicle(false); setSelectedVehicleId(null) }
                 }}
               >
                 <span className="nav-icon"><Icon size={28} strokeWidth={2} /></span>
@@ -129,13 +130,20 @@ export default function Homepage({ user, onSignOut }) {
         </header>
 
         <section className="page-content">
-          {showVehicles ? (
-            <ViewVehicles />
+          {selectedVehicleId !== null ? (
+            <ViewVehicleInfo
+              vehicleId={selectedVehicleId}
+              onBack={() => setSelectedVehicleId(null)}
+            />
+          ) : showVehicles ? (
+            <ViewVehicles
+              pressViewVehicle={(id) => setSelectedVehicleId(id)}
+            />
           ) : showAddVehicle ? (
             <AddVehicle onDone={() => setShowAddVehicle(false)} />
           ) : (
             <>
-          <div className="section-heading">
+        <div className="section-heading">
             <h1>Resumen de la Flota</h1>
             <span>Fecha would be here</span>
           </div>

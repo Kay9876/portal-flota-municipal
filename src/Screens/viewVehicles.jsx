@@ -7,7 +7,7 @@ import AddVehicle from './addVehicle'
 
 const PHOTO_BUCKET = 'vehicle-photos'
 
-export default function ViewVehicles() {
+export default function ViewVehicles({ pressViewVehicle }) {
   const [vehicles, setVehicles] = useState([])
   const [photoUrls, setPhotoUrls] = useState({})
   const [loading, setLoading] = useState(true)
@@ -24,6 +24,8 @@ export default function ViewVehicles() {
     async function load() {
       setLoading(true)
       setError('')
+      const { data: { session } } = await supabase.auth.getSession()
+      console.log('Supabase session:', session)
       const { data, error } = await supabase
         .from('vehicles')
         .select('id, department_id, manufacturer, model, year, license_plate, is_active, image_path, departments(name)')
@@ -203,7 +205,18 @@ export default function ViewVehicles() {
               </thead>
               <tbody>
                 {visible.map((v) => (
-                  <tr key={v.id}>
+                  <tr
+                      key={v.id}
+                      className="vv-clickable-row"
+                      onClick={() => pressViewVehicle?.(v.id)}
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          pressViewVehicle?.(v.id)
+                        }
+                      }}
+                    >
                    <td data-label="Vehículo">{v.manufacturer} {v.model}</td>
                     <td data-label="Año">{v.year ?? '—'}</td>
                     <td data-label="Matrícula"><span className="vv-plate">{v.license_plate}</span></td>

@@ -8,6 +8,9 @@ import { supabase } from '../supabaseClient'
 import escudoVA from '../assets/escudoVA.png'
 import AddVehicle from './addVehicle'
 import AdminUsers from './adminIT/AdminUsers'
+import AddFuel from './addFuel'
+import ViewVehicles from './viewVehicles'
+
 
 const vehicleStats = [
   { label: 'Total de vehículos', value: '—', Icon: CarFront, color: 'navy' },
@@ -17,7 +20,7 @@ const vehicleStats = [
 ]
 const quickActions = [
   { label: 'Registrar uso diario', Icon: ClipboardList },
-  { label: 'Registrar combustible', Icon: Fuel },
+  { label: 'Registrar combustible', Icon: Fuel, page: 'addFuel' },
   { label: 'Registrar mantenimiento', Icon: Wrench },
   { label: 'Ver reportes', Icon: FileText },
 ]
@@ -63,6 +66,7 @@ export default function Homepage({ user, onSignOut }) {
   function navigate(page) {
     setActivePage(page)
     setShowAddVehicle(false)
+    setProfileError('')
   }
 
   return (
@@ -105,12 +109,14 @@ export default function Homepage({ user, onSignOut }) {
               <div className="stats">{vehicleStats.map(({ label, value, Icon, color }) => <article className={`stat ${color}`} key={label}><span className="stat-icon"><Icon size={28} strokeWidth={2} /></span><div><p className="label">{label}</p><p className="value">{value}</p></div></article>)}</div>
               <div className="overview-grid"><article className="card"><h2>Vehículos por departamento</h2><p>El desglose aparecerá cuando se conecte el resumen de datos de la flota.</p></article><article className="card"><h2>Gastos mensuales</h2><p>El resumen de gastos aparecerá cuando se conecten los registros de combustible y mantenimiento.</p></article></div>
               <h2 className="actions-heading">Accesos rápidos</h2>
-              <div className="actions-grid">{quickActions.map(({ label, Icon }) => <button className="action-card" key={label} type="button" onClick={() => setProfileError(`La sección “${label}” aún no está implementada.`)}><span className="action-icon"><Icon size={26} strokeWidth={2} /></span>{label}</button>)}</div>
+              <div className="actions-grid">{quickActions.map(({ label, Icon,page }) => <button className="action-card" key={label} type="button" onClick={() => page ? navigate(page):setProfileError(`La sección “${label}” aún no está implementada.`)}><span className="action-icon"><Icon size={26} strokeWidth={2} /></span>{label}</button>)}</div>
               <button type="button" className="btn-primary" onClick={() => setShowAddVehicle(true)}>Agregar vehículo</button>
               {isAdmin && <div className="admin-shortcut"><div><strong>Administración del sistema</strong><p>Gestiona cuentas y permisos de acceso.</p></div><button className="admin-button primary" type="button" onClick={() => navigate('users')}><Users size={17} /> Gestionar usuarios</button></div>}
             </>
-          ) : activePage === 'vehicles' ? (
-            <div className="admin-panel"><div className="section-heading"><h1>Vehículos</h1><button className="admin-button primary" type="button" onClick={() => setShowAddVehicle(true)}>Agregar vehículo</button></div><p>Usa el formulario para registrar un vehículo. La lista y edición de vehículos requieren conectarse a las políticas y consultas de tu base de datos.</p></div>
+          ) : activePage === 'addFuel' ? (
+            <AddFuel onDone={()=>navigate('home')}/>
+          ): activePage==='vehicles'?(
+            <ViewVehicles />
           ) : activePage === 'departments' && isAdmin ? (
             <div className="admin-panel"><h1>Departamentos</h1><p>La administración de usuarios permite asignar un departamento. Para crear, editar o eliminar departamentos se debe implementar una pantalla específica y sus políticas RLS.</p></div>
           ) : activePage === 'settings' && isAdmin ? (

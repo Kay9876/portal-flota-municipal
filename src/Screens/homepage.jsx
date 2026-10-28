@@ -22,6 +22,7 @@ import {
 
 import escudoLogo from '../assets/escudoVA.png'
 import AddVehicle from './addVehicle'
+import AddFuel from './addFuel'
 const vehicleStats = [
   { label: 'Total de vehículos', value: '# would be in these sections', Icon: CarFront, color: 'navy' },
   { label: 'En uso', value: '-', Icon: Car, color: 'green' },
@@ -53,6 +54,7 @@ export default function Homepage({ user, onSignOut }) {
   const firstName = user?.user_metadata?.first_name || user?.email || 'Usuario'
   const roleLabel = user?.user_metadata?.is_admin ? 'Administrador' : 'Usuario'
   const [showAddVehicle, setShowAddVehicle] = useState(false)
+  const [showAddFuel, setShowAddFuel] = useState(false)
   return (
     <div className="app-layout">
       <aside className="sidebar">
@@ -113,12 +115,19 @@ export default function Homepage({ user, onSignOut }) {
             <button className="btn-ghost" type="button" onClick={onSignOut}>Salir</button>
           </div>
         </header>
-
+        
         <section className="page-content">
           {showAddVehicle ? (
             <AddVehicle onDone={() => setShowAddVehicle(false)} />
+          ) : showAddFuel ? (
+            <AddFuel onDone={() => setShowAddFuel(false)} />
           ) : (
-            <>
+          <>
+            
+
+
+            
+            
           <div className="section-heading">
             <h1>Resumen de la Flota</h1>
             <span>Fecha would be here</span>
@@ -161,6 +170,7 @@ export default function Homepage({ user, onSignOut }) {
                 {label}
               </button>
             ))}
+
           </div>
           <button
             type="button"
@@ -168,6 +178,13 @@ export default function Homepage({ user, onSignOut }) {
             onClick={() => setShowAddVehicle(true)}
           >
             Agregar Vehículo
+          </button>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => setShowAddFuel(true)}
+          >
+            Agregar Despacho de Combustible
           </button>
           </>
           )}

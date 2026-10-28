@@ -1,0 +1,75 @@
+.af-form {
+  display: grid;
+  gap: 20px;
+}
+.af-form > .av-alert,
+.af-form > .af-legend { margin: -8px 0 0; }
+
+.af-scan {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: var(--av-blue-soft);
+  border-color: #c9dbec;
+}
+.af-scan-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: #fff;
+  color: var(--av-navy);
+}
+.af-scan-text { flex: 1; min-width: 220px; }
+.af-scan-text strong { color: var(--av-navy); font-size: 1.05rem; }
+.af-scan-text p { margin: 4px 0 0; color: var(--av-muted); font-size: 0.92rem; }
+
+.af-vehicle {
+  display: flex;
+  gap: 28px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  margin: -4px 0 16px;
+  background: var(--av-blue-soft);
+  border-radius: 10px;
+  color: var(--av-navy);
+}
+.af-vehicle div { display: grid; gap: 2px; }
+.af-vehicle span { font-size: 0.75rem; color: var(--av-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.af-vehicle strong { font-size: 0.98rem; }
+
+.af-note { margin: -4px 0 16px; color: var(--av-muted); font-size: 0.92rem; }
+
+.af-checks { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.af-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--av-border);
+  border-radius: 10px;
+  background: #fff;
+  font-weight: 600;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+.af-check:hover { background: var(--av-blue-soft); }
+.af-check input { width: 18px; height: 18px; margin: 0; accent-color: var(--av-navy); }
+
+.af-ai input:not([type=checkbox]),
+.af-ai select { background: #eef6ff; border-color: #a9c8e8; }
+.af-check.af-ai { background: #eef6ff; border-color: #a9c8e8; }
+
+.af-doubtful input:not([type=checkbox]),
+.af-doubtful select { background: #fff7e0; border-color: #e0a800; }
+.af-check.af-doubtful { background: #fff7e0; border-color: #e0a800; }
+
+.af-alert-warning { background: #fff7e0; color: #8a5a00; }
+
+.af-legend { display: flex; flex-wrap: wrap; gap: 20px; font-size: 0.85rem; color: var(--av-muted); }
+.af-legend span { display: inline-flex; align-items: center; gap: 8px; }
+.af-swatch { display: inline-block; width: 14px; height: 14px; border-radius: 4px; }
+.af-swatch-ai { background: #eef6ff; border: 1px solid #a9c8e8; }
+.af-swatch-doubt { background: #fff7e0; border: 1px solid #e0a800; }

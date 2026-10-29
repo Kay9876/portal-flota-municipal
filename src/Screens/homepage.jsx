@@ -7,6 +7,8 @@ import {
 import { supabase } from '../supabaseClient'
 import escudoVA from '../assets/escudoVA.png'
 import AddVehicle from './addVehicle'
+import ViewVehicles from './viewVehicles'
+import ViewVehicleInfo from './viewVehicleInfo'
 import AdminUsers from './adminIT/AdminUsers'
 
 const vehicleStats = [
@@ -38,6 +40,8 @@ export default function Homepage({ user, onSignOut }) {
   const [profileError, setProfileError] = useState('')
   const [activePage, setActivePage] = useState('home')
   const [showAddVehicle, setShowAddVehicle] = useState(false)
+  const [showVehicles, setShowVehicles] = useState(false)
+  const [selectedVehicleId, setSelectedVehicleId] = useState(null)
 
   useEffect(() => {
     let alive = true
@@ -73,13 +77,28 @@ export default function Homepage({ user, onSignOut }) {
           <div><h2>Municipio de Vega Alta</h2><p>Gestión de Flota Municipal</p></div>
         </div></div>
         <nav className="sidebar-nav" aria-label="Navegación principal">
-          {sidebarItems.map(({ label, Icon, page }) => (
-            <button type="button" key={page} className={`sidebar-nav-button ${activePage === page && !showAddVehicle ? 'active' : ''}`} onClick={() => navigate(page)}>
-              <span className="nav-icon"><Icon size={21} strokeWidth={2} /></span><span>{label}</span>
-            </button>
-          ))}
+          {sidebarItems.map(({ label, Icon }) => {
+            const isActive =
+              (label === 'Inicio' && !showVehicles && !showAddVehicle && selectedVehicleId === null) ||
+              (label === 'Vehículos' && (showVehicles || showAddVehicle || selectedVehicleId !== null))
+            return (
+              <a
+                href="#"
+                key={label}
+                className={isActive ? 'active' : ''}
+                onClick={(e) => {
+                  e.preventDefault()
+                    if (label === 'Inicio') { setShowVehicles(false); setShowAddVehicle(false); setSelectedVehicleId(null) }
+                    if (label === 'Vehículos') { setShowVehicles(true); setShowAddVehicle(false); setSelectedVehicleId(null) }
+                }}
+              >
+                <span className="nav-icon"><Icon size={28} strokeWidth={2} /></span>
+                <span>{label}</span>
+              </a>
+            )
+          })}
         </nav>
-        <div className="sidebar-footer"><span className="sidebar-footer-dot" /> Portal de Flota Municipal</div>
+
       </aside>
 
       <main className="main-content">
@@ -93,6 +112,15 @@ export default function Homepage({ user, onSignOut }) {
         </header>
 
         <section className="page-content">
+          {selectedVehicleId !== null ? (
+            <ViewVehicleInfo
+              vehicleId={selectedVehicleId}
+              onBack={() => setSelectedVehicleId(null)}
+            />
+          ) : showVehicles ? (
+            <ViewVehicles
+              pressViewVehicle={(id) => setSelectedVehicleId(id)}
+            />
           {profileError && <div className="admin-alert error">No se pudo cargar tu perfil: {profileError}</div>}
           {!profileLoading && !profile && <div className="admin-alert error">No se encontró un perfil para esta cuenta. Contacta al administrador del sistema.</div>}
           {activePage === 'users' && isAdmin ? (
@@ -101,6 +129,57 @@ export default function Homepage({ user, onSignOut }) {
             <AddVehicle onDone={() => setShowAddVehicle(false)} />
           ) : activePage === 'home' ? (
             <>
+        <div className="section-heading">
+            <h1>Resumen de la Flota</h1>
+            <span>Fecha would be here</span>
+          </div>
+
+          <div className="stats">
+            {vehicleStats.map((stat) => (
+              <article className={`stat ${stat.color}`} key={stat.label}>
+                <span className="stat-icon">
+                  <stat.Icon size={30} strokeWidth={2} />
+                </span>
+                <div>
+                  <p className="label">{stat.label}</p>
+                  <p className="value">{stat.value}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="overview-grid">
+            <article className="card">
+              <h2>Vehículos por departamento</h2>
+              <p>El desglose por departamento aparecerá aquí.</p>
+            </article>
+
+            <article className="card">
+              <h2>Gastos mensuales</h2>
+              <p>El resumen de gastos aparecerá aquí.</p>
+            </article>
+          </div>
+
+          <h2 className="actions-heading">Accesos rápidos</h2>
+
+          <div className="actions-grid">
+            {quickActions.map(({ label, Icon }) => (
+              <button className="action-card" key={label} type="button">
+                <span className="action-icon">
+                  <Icon size={28} strokeWidth={2} />
+                </span>
+                {label}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => setShowAddVehicle(true)}
+          >
+            Agregar Vehículo
+          </button>
+          </>
               <div className="section-heading"><div><h1>Resumen de la Flota</h1><p className="admin-subtitle">Bienvenido/a, {displayName}</p></div><span>{new Date().toLocaleDateString('es-PR', { year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
               <div className="stats">{vehicleStats.map(({ label, value, Icon, color }) => <article className={`stat ${color}`} key={label}><span className="stat-icon"><Icon size={28} strokeWidth={2} /></span><div><p className="label">{label}</p><p className="value">{value}</p></div></article>)}</div>
               <div className="overview-grid"><article className="card"><h2>Vehículos por departamento</h2><p>El desglose aparecerá cuando se conecte el resumen de datos de la flota.</p></article><article className="card"><h2>Gastos mensuales</h2><p>El resumen de gastos aparecerá cuando se conecten los registros de combustible y mantenimiento.</p></article></div>

@@ -179,7 +179,7 @@ export default function AddVehicle({onDone}){
                 </div>
                 {onDone &&(
                     <button type="button" className="av-btn av-btn-secondary" onClick={onDone}>
-                        Volver al inicio
+                        Volver a vehiculos
                     </button>
                 )}
             </div>

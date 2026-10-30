@@ -10,6 +10,7 @@ import AddVehicle from './addVehicle'
 import AdminUsers from './adminIT/AdminUsers'
 import AddFuel from './addFuel'
 import ViewVehicles from './viewVehicles'
+import ViewVehicleInfo from './viewVehicleInfo'
 
 
 const vehicleStats = [
@@ -41,6 +42,7 @@ export default function Homepage({ user, onSignOut }) {
   const [profileError, setProfileError] = useState('')
   const [activePage, setActivePage] = useState('home')
   const [showAddVehicle, setShowAddVehicle] = useState(false)
+  const [selectedVehicleId,setSelectedVehicleId] = useState(null)
 
   useEffect(() => {
     let alive = true
@@ -67,6 +69,7 @@ export default function Homepage({ user, onSignOut }) {
     setActivePage(page)
     setShowAddVehicle(false)
     setProfileError('')
+    setSelectedVehicleId(null)
   }
 
   return (
@@ -115,9 +118,16 @@ export default function Homepage({ user, onSignOut }) {
             </>
           ) : activePage === 'addFuel' ? (
             <AddFuel onDone={()=>navigate('home')}/>
-          ): activePage==='vehicles'?(
-            <ViewVehicles />
-          ) : activePage === 'departments' && isAdmin ? (
+          ): activePage=== 'vehicles'?(
+          selectedVehicleId!==null?(
+            <ViewVehicleInfo 
+            vehicleId={selectedVehicleId}
+            onBack={()=>setSelectedVehicleId(null)}
+            />
+          ) : (
+            <ViewVehicles pressViewVehicle={setSelectedVehicleId} />
+          )
+          ): activePage === 'departments' && isAdmin ? (
             <div className="admin-panel"><h1>Departamentos</h1><p>La administración de usuarios permite asignar un departamento. Para crear, editar o eliminar departamentos se debe implementar una pantalla específica y sus políticas RLS.</p></div>
           ) : activePage === 'settings' && isAdmin ? (
             <div className="admin-panel"><h1>Configuración</h1><p>La configuración del sistema estará disponible aquí.</p></div>

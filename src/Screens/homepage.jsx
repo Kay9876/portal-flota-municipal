@@ -29,7 +29,6 @@ const quickActions = [
 const baseSidebarItems = [
   { label: 'Inicio', Icon: House, page: 'home' },
   { label: 'Vehículos', Icon: CarFront, page: 'vehicles' },
-  { label: 'Departamentos', Icon: Building2, page: 'departments' },
   { label: 'Registros diarios', Icon: CalendarDays, page: 'daily' },
   { label: 'Recibos de combustible', Icon: Fuel, page: 'fuel' },
   { label: 'Mantenimiento', Icon: Wrench, page: 'maintenance' },
@@ -64,7 +63,11 @@ export default function Homepage({ user, onSignOut }) {
   const isAdmin = profile?.is_admin === true && profile?.is_active !== false
   const displayName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || user?.email || 'Usuario'
   const roleLabel = isAdmin ? 'Administrador' : profile?.is_global_viewer ? 'Visor global' : 'Usuario'
-  const sidebarItems = isAdmin ? [...baseSidebarItems, { label: 'Usuarios', Icon: Users, page: 'users' }, { label: 'Configuración', Icon: Settings, page: 'settings' }] : baseSidebarItems
+  const sidebarItems = isAdmin ? [...baseSidebarItems,
+     { label: 'Usuarios', Icon: Users, page: 'users' },
+     { label: 'Departamentos', Icon: Building2, page: 'departments' }, 
+     { label: 'Configuración', Icon: Settings, page: 'settings' }]
+      : baseSidebarItems
 
   function navigate(page) {
     setActivePage(page)

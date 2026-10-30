@@ -11,6 +11,7 @@ import AdminUsers from './adminIT/AdminUsers'
 import AddFuel from './addFuel'
 import ViewVehicles from './viewVehicles'
 import ViewVehicleInfo from './viewVehicleInfo'
+import Departments from './departments'
 
 
 const vehicleStats = [
@@ -127,8 +128,7 @@ export default function Homepage({ user, onSignOut }) {
           ) : (
             <ViewVehicles pressViewVehicle={setSelectedVehicleId} />
           )
-          ): activePage === 'departments' && isAdmin ? (
-            <div className="admin-panel"><h1>Departamentos</h1><p>La administración de usuarios permite asignar un departamento. Para crear, editar o eliminar departamentos se debe implementar una pantalla específica y sus políticas RLS.</p></div>
+          ) : activePage === 'departments' && isAdmin ? (<Departments />          
           ) : activePage === 'settings' && isAdmin ? (
             <div className="admin-panel"><h1>Configuración</h1><p>La configuración del sistema estará disponible aquí.</p></div>
           ) : (

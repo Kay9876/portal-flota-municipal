@@ -20,11 +20,20 @@
   "homepage": "https://github.com/Kay9876/portal-flota-municipal#readme",
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",
+    "lucide-react": "^1.59.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
+    "@parcel/source-map": "^2.1.1",
     "buffer": "^6.0.3",
-    "parcel": "^2.16.4"
+    "parcel": "^2.16.4",
+    "supabase": "^2.122.0"
+  },
+  "allowScripts": {
+    "@parcel/watcher@2.6.0": true,
+    "@swc/core@1.16.13": true,
+    "lmdb@2.8.5": true,
+    "msgpackr-extract@3.0.4": true
   }
 }

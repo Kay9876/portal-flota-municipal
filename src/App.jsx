@@ -326,13 +326,16 @@ export default function App() {
     return () => data.subscription.unsubscribe()
   }, [])
 
-  return session ? (
+  const mustChangePassword = session?.user?.user_metadata?.must_change_password === true
+
+  if (!session) return <LoginPage />
+  if (mustChangePassword) return <LoginPage key="force-change" forceChange />
+
+  return (
     <Homepage
       user={session.user}
       onSignOut={() => supabase.auth.signOut()}
     />
-  ) : (
-    <LoginPage />
   )
 
   // For testing purposes, we can return the Homepage component directly with a test user 

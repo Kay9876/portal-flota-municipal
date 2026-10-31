@@ -47,8 +47,11 @@ Deno.serve(async (req) => {
     if ((count || 0) <= 1) return respond({ error: 'No puedes desactivar o degradar al último administrador activo.' }, 400)
   }
 
-  const authUpdate: { email?: string; password?: string } = { email }
-  if (password) authUpdate.password = password
+  const authUpdate: { email?: string; password?: string; user_metadata?: Record<string, unknown> } = { email }
+  if (password) {
+    authUpdate.password = password
+    authUpdate.user_metadata = { must_change_password: true }
+  }
   const { error: authUpdateError } = await admin.auth.admin.updateUserById(userId, authUpdate)
   if (authUpdateError) return respond({ error: `No se pudo actualizar la cuenta de autenticación: ${authUpdateError.message}` }, 400)
 

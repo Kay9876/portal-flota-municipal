@@ -1,13 +1,13 @@
 // Login page: users sign in with email and password 
 // If the credentials are correct the homepage is shown. 
-
 import { useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
-
 import { supabase } from '../supabaseClient'
-
-
 import escudoLogo from 'url:../assets/escudoVA.png'
+import { createClient } from '@supabase/supabase-js'
+
+
+const MIN_PASSWORD = 8
 
 
 function friendlyError(error) {
@@ -15,7 +15,7 @@ function friendlyError(error) {
   const text = (error?.message || '').toLowerCase()
 
   if (code === 'invalid_credentials' || text.includes('invalid login credentials')) {
-    return 'Correo electrónico o contraseña incorrectos.'
+    return 'Correo electrónico o contraseña incorrecta.'
   }
   if (code === 'email_not_confirmed' || text.includes('email not confirmed')) {
     return 'Debes confirmar tu correo electrónico antes de entrar.'
@@ -32,39 +32,139 @@ function friendlyError(error) {
   return error?.message || 'No se pudo completar la solicitud. Inténtalo de nuevo.'
 }
 
-export default function LoginPage() {
+function validateNewPassword(newPassword, confirmPassword, currentPassword) {
+  if (newPassword.length < MIN_PASSWORD) {
+    return `La contraseña debe tener al menos ${MIN_PASSWORD} caracteres.`
+  }
+  if (newPassword != confirmPassword) {
+    return 'Las contraseñas no coinciden.'
+  }
+  if (newPassword === currentPassword) {
+    return 'La nueva contraseña debe ser diferente a la contraseña actual.'
+  }
+}
+
+function PasswordField({ id, label, value, onChange, autoComplete, show, onToggle, hint, minLength, autoFocus }) {
+  return (
+    <div className="field">
+      <label htmlFor={id}>{label}</label>
+      <div className="password-wrap">
+        <input
+          id={id}
+          type={show ? 'text' : 'password'}
+          autoComplete={autoComplete}
+          autoFocus={autoFocus}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          required
+          minLength={minLength}
+          aria-describedby={hint ? `${id}-hint` : undefined}
+        />
+        <button
+          className="password-toggle"
+          type="button"
+          onClick={onToggle}
+          aria-label={`${show ? 'Ocultar' : 'Mostrar'} ${label.toLowerCase()}`}
+          aria-pressed={show}
+        >
+          {show ? <EyeOff size={18} strokeWidth={2} /> : <Eye size={18} strokeWidth={2} />}
+        </button>
+      </div>
+      {hint && <p className="login-help" id={`${id}-hint`}>{hint}</p>}
+    </div>
+  )
+}
+
+export default function LoginPage({forceChange = false}) {
+  const [mode, setMode] = useState('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
-  const [isSignup, setIsSignup] = useState(false)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState(null) // { type: 'error' | 'ok', text }
+
+  const changing = forceChange || mode === 'change'
+
+  function switchMode(next) {
+    setMode(next)
+    setMsg(null)
+    setPassword('')
+    setNewPassword('')
+    setConfirmPassword('')
+    setShowPassword(false)
+  }
+
+  async function changePasswordFromLogin() {
+    const cleanEmail = email.trim()
+    const isolated = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+        storageKey: 'password-change',
+      },
+    })
+
+    const { error: signInError } = await isolated.auth.signInWithPassword({ email: cleanEmail, password })
+    if (signInError) {
+      setMsg({ type: 'error', text: friendlyError(signInError) })
+      return
+    }
+
+    const { error: updateError } = await isolated.auth.updateUser({
+      password: newPassword,
+      data: { must_change_password: false },
+    })
+    if (updateError) {
+      await isolated.auth.signOut({ scope: 'local' })
+      setMsg({ type: 'error', text: friendlyError(updateError) })
+      return
+    }
+
+    
+    const { error: loginError } = await supabase.auth.signInWithPassword({
+      email: cleanEmail,
+      password: newPassword,
+    })
+    if (loginError) {
+      switchMode('signin')
+      setMsg({ type: 'ok', text: 'Contraseña actualizada. Inicia sesión con tu contraseña nueva.' })
+    }
+  
+  }
+
 
   async function handleSubmit(e) {
     e.preventDefault()
     if (loading) return
 
     setMsg(null)
+
+    if (changing) {
+      const problem = validateNewPassword(newPassword, confirmPassword, forceChange ? '' : password)
+      if (problem) {
+        setMsg({ type: 'error', text: problem })
+        return
+      }
+    }
+
     setLoading(true)
     try {
-      const cleanEmail = email.trim()
-      const { data, error } = isSignup
-        ? await supabase.auth.signUp({
-            email: cleanEmail,
-            password,
-            options: { data: { first_name: firstName.trim(), last_name: lastName.trim() } },
-          })
-        : await supabase.auth.signInWithPassword({ email: cleanEmail, password })
-
-      if (error) {
-        setMsg({ type: 'error', text: friendlyError(error) })
-      } else if (isSignup && !data?.session) {
-        // Si el proyecto exige confirmar el correo, no hay sesión todavía.
-        setMsg({ type: 'ok', text: 'Cuenta creada. Revisa tu correo para confirmarla y luego inicia sesión.' })
+      if (forceChange) {
+        const { error } = await supabase.auth.updateUser({
+          password: newPassword,
+          data: { must_change_password: false },
+        })
+        if (error) setMsg({ type: 'error', text: friendlyError(error) })
+      } else if (mode === 'change') {
+        await changePasswordFromLogin()
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+        if (error) setMsg({ type: 'error', text: friendlyError(error) })
+       
       }
-      // Si hay sesión, App.jsx la detecta (onAuthStateChange) y muestra Homepage.
     } catch (err) {
       setMsg({ type: 'error', text: friendlyError(err) })
     } finally {
@@ -72,10 +172,13 @@ export default function LoginPage() {
     }
   }
 
-  function toggleMode() {
-    setIsSignup(!isSignup)
-    setMsg(null)
-  }
+  const toggleShow = () => setShowPassword((v) => !v)
+
+  let submitLabel
+  if (loading) submitLabel = changing ? 'Guardando...' : 'Entrando...'
+  else if (forceChange) submitLabel = 'Guardar nueva contraseña'
+  else if (mode === 'change') submitLabel = 'Cambiar contraseña'
+  else submitLabel = 'Iniciar sesión'
 
   return (
     <main className="login-page">
@@ -100,79 +203,88 @@ export default function LoginPage() {
           <p>Municipio Autónomo de Vega Alta</p>
         </div>
 
-        {isSignup && (
-          <div className="row-2">
-            <div className="field">
-              <label htmlFor="login-first-name">Nombre</label>
-              <input
-                id="login-first-name"
-                autoComplete="given-name"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                required
-              />
+        {forceChange && (
+          <div className="msg ok" role="status">
+            Esta es tu primera vez entrando al portal. Debes cambiar tu contraseña a una diferente a la que se le ha provehido. 
             </div>
-            <div className="field">
-              <label htmlFor="login-last-name">Apellido</label>
-              <input
-                id="login-last-name"
-                autoComplete="family-name"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                required
-              />
-            </div>
+            )}
+
+        {!forceChange && mode === 'change' && (
+          <p className="login-help">Cambia tu contraseña. Debe ser diferente a la actual.</p>
+        )}    
+
+        {!forceChange && (
+          <div className="field">
+            <label htmlFor="login-email">Correo electrónico</label>
+            <input
+              id="login-email"
+              type="email"
+              autoComplete="username"
+              autoFocus
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
           </div>
         )}
 
-        <div className="field">
-          <label htmlFor="login-email">Correo electrónico</label>
-          <input
-            id="login-email"
-            type="email"
-            autoComplete="username"
-            autoFocus
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
+        {!forceChange && (
+          <PasswordField
+            id="login-password"
+            label={mode === 'change' ? 'Contraseña actual' : 'Contraseña'}
+            value={password}
+            onChange={setPassword}
+            autoComplete="current-password"
+            show={showPassword}
+            onToggle={toggleShow}
           />
-        </div>
+        )}
 
-        <div className="field">
-          <label htmlFor="login-password">Contraseña{isSignup ? ' (mínimo 6 caracteres)' : ''}</label>
-          <div className="password-wrap">
-            <input
-              id="login-password"
-              type={showPassword ? 'text' : 'password'}
-              autoComplete={isSignup ? 'new-password' : 'current-password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={isSignup ? 6 : undefined}
+        {changing && (
+          <>
+            <PasswordField
+              id="login-new-password"
+              label="Contraseña nueva"
+              value={newPassword}
+              onChange={setNewPassword}
+              autoComplete="new-password"
+              show={showPassword}
+              onToggle={toggleShow}
+              hint={`Mínimo ${MIN_PASSWORD} caracteres.`}
+              minLength={MIN_PASSWORD}
+              autoFocus={forceChange}
             />
-            <button
-              className="password-toggle"
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-              aria-pressed={showPassword}
-            >
-              {showPassword ? <EyeOff size={18} strokeWidth={2} /> : <Eye size={18} strokeWidth={2} />}
-            </button>
-          </div>
-        </div>
+            <PasswordField
+              id="login-confirm-password"
+              label="Confirmar contraseña nueva"
+              value={confirmPassword}
+              onChange={setConfirmPassword}
+              autoComplete="new-password"
+              show={showPassword}
+              onToggle={toggleShow}
+            />
+          </>
+        )}
 
         <button className="btn" type="submit" disabled={loading}>
-          {loading ? (isSignup ? 'Creando cuenta…' : 'Entrando…') : (isSignup ? 'Crear cuenta' : 'Iniciar sesión')}
+          {submitLabel}
         </button>
 
-        <button className="btn-link" type="button" onClick={toggleMode}>
-          {isSignup ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Crea una'}
-        </button>
+        {forceChange ? (
+          <button className="btn-link" type="button" onClick={() => supabase.auth.signOut()}>
+            Salir
+          </button>
+        ) : mode === 'change' ? (
+          <button className="btn-link" type="button" onClick={() => switchMode('signin')}>
+            Volver a iniciar sesión
+          </button>
+        ) : (
+          <button className="btn-link" type="button" onClick={() => switchMode('change')}>
+            Cambiar contraseña
+          </button>
+        )}
 
         {msg && <div className={`msg ${msg.type}`} role={msg.type === 'error' ? 'alert' : 'status'}>{msg.text}</div>}
-
-        
       </form>
     </main>
   )

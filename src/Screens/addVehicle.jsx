@@ -87,7 +87,7 @@ export default function AddVehicle({onDone}){
 
         const set=(key)=>(errs)=>{
             let value=errs.target.value
-            if(key=='license_plate') value=value.toUpperCase().replace(/\s/g,'')
+            if(key=='license_plate') value=value.toUpperCase().replace(/[^A-Z0-9]/g,'')
             if(key=='vin') value=value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,VIN_LENGTH)
             setForm(f=>({...f,[key]:value}))
             if(status.type!=='idle') setStatus({type:'idle',text:''})
@@ -126,21 +126,21 @@ export default function AddVehicle({onDone}){
             setTouched({department_id:true,manufacturer:true,model:true,year:true,license_plate:true,vin:true})
             if(!isValid) return
             setStatus({type:'saving',text:'Guardando vehículo...'})
-            const license_plate=form.license_plate.toUpperCase().replace(/\s/g,'')
+            const license_plate=form.license_plate.toUpperCase().replace(/[^A-Z0-9]/g,'')
             let imagePath=null
             if(photo){
                 const ext=photo.file.name.split('.').pop().toLowerCase()
                 imagePath=`${license_plate}-${Date.now()}.${ext}`
                 const {error:uploadError}=await supabase.storage.from(PHOTO_BUCKET).upload(imagePath,photo.file)
                 if(uploadError){
-                    setStatus({type:'error',text:`Error uploading photo: ${uploadError.message}`})
+                    setStatus({type:'error',text:`Error al subir la foto: ${uploadError.message}`})
                     return
                 }
             }
             const{error}=await supabase.from('vehicles').insert({
                 department_id:Number(form.department_id),
-                manufacturer:form.manufacturer,
-                model:form.model,
+                manufacturer:form.manufacturer.trim().replace(/\b\w/g,c=>c.toUpperCase()),
+                model:form.model.trim(),
                 year:form.year ? Number(form.year) : null,
                 license_plate:license_plate,
                 vin:form.vin,
@@ -310,7 +310,7 @@ export default function AddVehicle({onDone}){
                     {status.type==='success' && <div className="av-alert av-alert-ok"><CheckCircle2 size={16} /> {status.text}</div>
                     }
 
-                    <div className="av-form-actions">
+                    <div className="av-actions">
                         <button type="submit" className="av-btn av-btn-primary" disabled={saving}>
                             {saving ? 'Guardando...' : 'Guardar Vehículo'}
 

@@ -148,20 +148,20 @@ useEffect(() => {
     setFuelError('')
 
     const { data, error } = await supabase
-      .from('fuel')
+      .from('fuel_register')
       .select(`
         id,
-        fuel_date,
+        control_number,
+        dispatch_date,
         liters,
-        cost,
+        amount_dispatched,
         fuel_type,
         supplier_name,
-        driver_name,
-        driver_license_num,
-        vehicle_mileage
+        requester_name,
+        mileage
       `)
       .eq('vehicle_id', vehicleId)
-      .order('fuel_date', { ascending: false })
+      .order('dispatch_date', { ascending: false })
 
         console.log('Vehicle ID:', vehicleId)
         console.log('Fuel data:', data)
@@ -578,9 +578,9 @@ useEffect(() => {
             <table>
             <thead>
                 <tr>
+                  <th>Control #</th>
                 <th>Fecha</th>
                 <th>Tipo</th>
-                <th>Litros</th>
                 <th>Costo</th>
                 <th>Proveedor</th>
                 <th>Conductor</th>
@@ -590,19 +590,19 @@ useEffect(() => {
             <tbody>
                 {fuelRecords.map((record) => (
                 <tr key={record.id}>
-                    <td>{record.fuel_date || '—'}</td>
+                    <td>{record.control_number || '-'} </td>
+                    <td>{record.dispatch_date || '—'}</td>
                     <td>{record.fuel_type || '—'}</td>
-                    <td>{record.liters ?? '—'}</td>
                     <td>
-                    {record.cost != null
-                        ? `$${Number(record.cost).toFixed(2)}`
+                    {record.amount_dispatched != null
+                        ? `$${Number(record.amount_dispatched).toFixed(2)}`
                         : '—'}
                     </td>
                     <td>{record.supplier_name || '—'}</td>
-                    <td>{record.driver_name || '—'}</td>
+                    <td>{record.requester_name || '—'}</td>
                     <td>
-                    {record.vehicle_mileage != null
-                        ? Number(record.vehicle_mileage).toLocaleString('en-US')
+                    {record.mileage != null
+                        ? Number(record.mileage).toLocaleString('en-US')
                         : '—'}
                     </td>
                 </tr>

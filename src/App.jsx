@@ -319,16 +319,22 @@ function Home({ session }) {
 
 export default function App() {
   const [session, setSession] = useState(null)
+  const [recovering, setRecovering] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
-    const { data } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
+    const { data } = supabase.auth.onAuthStateChange((_e, s) => {
+      setSession(s)
+      if (_e === 'PASSWORD_RECOVERY') setRecovering(true)
+      if (_e === 'USER_UPDATED' || _e === 'SIGNED_OUT') setRecovering(false)
+    })
     return () => data.subscription.unsubscribe()
   }, [])
 
   const mustChangePassword = session?.user?.user_metadata?.must_change_password === true
 
   if (!session) return <LoginPage />
+  if (recovering) return <LoginPage key="recovery" forceChange recovery />
   if (mustChangePassword) return <LoginPage key="force-change" forceChange />
 
   return (

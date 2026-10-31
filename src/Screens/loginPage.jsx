@@ -32,15 +32,12 @@ function friendlyError(error) {
   return error?.message || 'No se pudo completar la solicitud. Inténtalo de nuevo.'
 }
 
-function validateNewPassword(newPassword, confirmPassword, currentPassword) {
+function validateNewPassword(newPassword, confirmPassword) {
   if (newPassword.length < MIN_PASSWORD) {
     return `La contraseña debe tener al menos ${MIN_PASSWORD} caracteres.`
   }
   if (newPassword != confirmPassword) {
     return 'Las contraseñas no coinciden.'
-  }
-  if (newPassword === currentPassword) {
-    return 'La nueva contraseña debe ser diferente a la contraseña actual.'
   }
 }
 
@@ -75,7 +72,7 @@ function PasswordField({ id, label, value, onChange, autoComplete, show, onToggl
   )
 }
 
-export default function LoginPage({forceChange = false}) {
+export default function LoginPage({forceChange = false, recovery = false}) {
   const [mode, setMode] = useState('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -85,7 +82,6 @@ export default function LoginPage({forceChange = false}) {
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState(null) // { type: 'error' | 'ok', text }
 
-  const changing = forceChange || mode === 'change'
 
   function switchMode(next) {
     setMode(next)
@@ -96,44 +92,6 @@ export default function LoginPage({forceChange = false}) {
     setShowPassword(false)
   }
 
-  async function changePasswordFromLogin() {
-    const cleanEmail = email.trim()
-    const isolated = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-        storageKey: 'password-change',
-      },
-    })
-
-    const { error: signInError } = await isolated.auth.signInWithPassword({ email: cleanEmail, password })
-    if (signInError) {
-      setMsg({ type: 'error', text: friendlyError(signInError) })
-      return
-    }
-
-    const { error: updateError } = await isolated.auth.updateUser({
-      password: newPassword,
-      data: { must_change_password: false },
-    })
-    if (updateError) {
-      await isolated.auth.signOut({ scope: 'local' })
-      setMsg({ type: 'error', text: friendlyError(updateError) })
-      return
-    }
-
-    
-    const { error: loginError } = await supabase.auth.signInWithPassword({
-      email: cleanEmail,
-      password: newPassword,
-    })
-    if (loginError) {
-      switchMode('signin')
-      setMsg({ type: 'ok', text: 'Contraseña actualizada. Inicia sesión con tu contraseña nueva.' })
-    }
-  
-  }
 
 
   async function handleSubmit(e) {
@@ -142,8 +100,8 @@ export default function LoginPage({forceChange = false}) {
 
     setMsg(null)
 
-    if (changing) {
-      const problem = validateNewPassword(newPassword, confirmPassword, forceChange ? '' : password)
+    if (forceChange) {
+      const problem = validateNewPassword(newPassword, confirmPassword)
       if (problem) {
         setMsg({ type: 'error', text: problem })
         return
@@ -158,12 +116,18 @@ export default function LoginPage({forceChange = false}) {
           data: { must_change_password: false },
         })
         if (error) setMsg({ type: 'error', text: friendlyError(error) })
-      } else if (mode === 'change') {
-        await changePasswordFromLogin()
+      } else if (mode === 'forgot') {
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: window.location.origin,
+        })
+        if (error) {
+          setMsg({ type: 'error', text: friendlyError(error) })
+        } else {
+          setMsg({ type: 'ok', text: 'Si el correo está registrado, recibirás un enlace para crear una contraseña nueva.' })
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
         if (error) setMsg({ type: 'error', text: friendlyError(error) })
-       
       }
     } catch (err) {
       setMsg({ type: 'error', text: friendlyError(err) })
@@ -175,9 +139,9 @@ export default function LoginPage({forceChange = false}) {
   const toggleShow = () => setShowPassword((v) => !v)
 
   let submitLabel
-  if (loading) submitLabel = changing ? 'Guardando...' : 'Entrando...'
+  if (loading) submitLabel = forceChange ? 'Guardando...' : 'Entrando...'
   else if (forceChange) submitLabel = 'Guardar nueva contraseña'
-  else if (mode === 'change') submitLabel = 'Cambiar contraseña'
+  else if (mode === 'forgot') submitLabel = 'Restablecer contraseña'
   else submitLabel = 'Iniciar sesión'
 
   return (
@@ -205,12 +169,14 @@ export default function LoginPage({forceChange = false}) {
 
         {forceChange && (
           <div className="msg ok" role="status">
-            Esta es tu primera vez entrando al portal. Debes cambiar tu contraseña a una diferente a la que se le ha provehido. 
+            {recovery
+              ? 'Elige una contraseña nueva para tu cuenta.'
+              : 'Esta es tu primera vez entrando al portal. Debes cambiar tu contraseña a una diferente a la que se te ha proveído.'}
             </div>
             )}
 
-        {!forceChange && mode === 'change' && (
-          <p className="login-help">Cambia tu contraseña. Debe ser diferente a la actual.</p>
+        {!forceChange && mode === 'forgot' && (
+          <p className="login-help">Ingresa tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.</p>
         )}    
 
         {!forceChange && (
@@ -228,10 +194,10 @@ export default function LoginPage({forceChange = false}) {
           </div>
         )}
 
-        {!forceChange && (
+        {!forceChange && mode === 'signin' && (
           <PasswordField
             id="login-password"
-            label={mode === 'change' ? 'Contraseña actual' : 'Contraseña'}
+            label="Contraseña"
             value={password}
             onChange={setPassword}
             autoComplete="current-password"
@@ -240,7 +206,7 @@ export default function LoginPage({forceChange = false}) {
           />
         )}
 
-        {changing && (
+        {forceChange && (
           <>
             <PasswordField
               id="login-new-password"
@@ -251,8 +217,7 @@ export default function LoginPage({forceChange = false}) {
               show={showPassword}
               onToggle={toggleShow}
               hint={`Mínimo ${MIN_PASSWORD} caracteres.`}
-              minLength={MIN_PASSWORD}
-              autoFocus={forceChange}
+              autoFocus
             />
             <PasswordField
               id="login-confirm-password"
@@ -274,12 +239,12 @@ export default function LoginPage({forceChange = false}) {
           <button className="btn-link" type="button" onClick={() => supabase.auth.signOut()}>
             Salir
           </button>
-        ) : mode === 'change' ? (
+        ) : mode === 'forgot' ? (
           <button className="btn-link" type="button" onClick={() => switchMode('signin')}>
             Volver a iniciar sesión
           </button>
         ) : (
-          <button className="btn-link" type="button" onClick={() => switchMode('change')}>
+          <button className="btn-link" type="button" onClick={() => switchMode('forgot')}>
             Cambiar contraseña
           </button>
         )}

@@ -195,7 +195,7 @@ useEffect(() => {
     setMaintenanceError('')
 
     const { data, error } = await supabase
-      .from('maintenance')
+      .from('maintenance.register')
       .select(`
         id,
         start_date,

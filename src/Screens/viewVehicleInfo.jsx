@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import VehicleGeneralTab from './viewVehicleGeneralTab'
 import './viewVehicleInfo.css'
 
 const PHOTO_BUCKET = 'vehicle-photos'
@@ -434,64 +435,12 @@ useEffect(() => {
           </nav>
 
           {activeTab === 'General' && (
-            <section className="card vdi-information">
-              <h2>Datos del vehículo</h2>
-
-              <div className="vdi-details-grid">
-                <div className="vdi-detail">
-                  <span className="vdi-label">Tablilla</span>
-                  <strong>{vehicle.license_plate || '—'}</strong>
-                </div>
-
-                <div className="vdi-detail">
-                  <span className="vdi-label">Marca</span>
-                  <strong>{vehicle.manufacturer || '—'}</strong>
-                </div>
-
-                <div className="vdi-detail">
-                  <span className="vdi-label">Modelo</span>
-                  <strong>{vehicle.model || '—'}</strong>
-                </div>
-
-                <div className="vdi-detail">
-                  <span className="vdi-label">Año</span>
-                  <strong>{vehicle.year ?? '—'}</strong>
-                </div>
-
-                <div className="vdi-detail">
-                  <span className="vdi-label">Departamento</span>
-                  <strong>{departmentName}</strong>
-                </div>
-
-                <div className="vdi-detail">
-                  <span className="vdi-label">Estado</span>
-                  <strong>{statusLabel}</strong>
-                </div>
-
-                <div className="vdi-detail">
-                  <span className="vdi-label">VIN</span>
-                  <strong className="vdi-long-value">
-                    {vehicle.vin || 'No registrado'}
-                  </strong>
-                </div>
-
-                <div className="vdi-detail">
-                  <span className="vdi-label">Millaje total</span>
-                  <strong>
-                    {vehicle.total_mileage != null
-                      ? `${Number(vehicle.total_mileage).toLocaleString('en-US')} millas`
-                      : 'No registrado'}
-                  </strong>
-                </div>
-
-                <div className="vdi-detail">
-                  <span className="vdi-label">ID</span>
-                  <strong>{vehicle.id}</strong>
-                </div>
-              </div>
-            </section>
+            <VehicleGeneralTab
+              vehicle={vehicle}
+              statusLabel={statusLabel}
+              onVehicleUpdated={setVehicle}
+            />
           )}
-
 
         {activeTab === 'Registros Diarios' && (
         <section className="card">

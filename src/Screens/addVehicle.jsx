@@ -1,7 +1,8 @@
 import {useState,useEffect,useMemo,useRef } from "react";
-import {CheckCircle2, AlertCircle,Loader2,Clock,ImagePlus,X} from 'lucide-react'
+import {CheckCircle2, AlertCircle,ImagePlus,X} from 'lucide-react'
 import { supabase } from "../supabaseClient";
 import './addVehicle.css'
+import { normalizePlate,normalizeVin,formatManufacturer,validateVehicle } from "../utils/vehicleValidation";
 
 const emptyForm = {
     department_id: '',
@@ -11,8 +12,6 @@ const emptyForm = {
     license_plate: '',
     vin: ''}
 
-const VIN_LENGTH = 17;
-const VIN_REGEX = /^[A-HJ-NPR-Z0-9]{17}$/; // VIN regex pattern
 
 const PHOTO_BUCKET='vehicle-photos'
 const PHOTO_TYPES=['image/jpeg','image/png']
@@ -34,10 +33,7 @@ const commonMakes=[
     'Mazda'
 ]
 
-function formatSize(bytes) {
-    return bytes < 1024 ? `${bytes} bytes` : `${(bytes / 1024).toFixed(2)} KB`;
 
-}
 
 // function photoUrl(path){
 //     if (!path) return null;
@@ -69,28 +65,17 @@ export default function AddVehicle({onDone}){
     },[])
     useEffect(()=>()=>{if(photo?.url) URL.revokeObjectURL(photo.url)},[photo])
     
-        const errors=useMemo(()=>{
-            const errs={}
-            if(!form.department_id) errs.department_id='Seleccione un departamento'
-            if( !form.manufacturer) errs.manufacturer='Ingrese el fabricante'
-            if(!form.model) errs.model='Ingrese el modelo'
-            if(!form.year) errs.year='Seleccione el año'
-            if(!form.license_plate) errs.license_plate='Ingrese la matrícula'
-                if(!form.vin) errs.vin='Ingrese el VIN'
-                else if(form.vin.length!==VIN_LENGTH) errs.vin=`El VIN debe tener ${VIN_LENGTH} caracteres`
-                else if(!VIN_REGEX.test(form.vin)) errs.vin='El VIN contiene caracteres inválidos'
-            
-            return errs
-        },[form])
+        const errors=useMemo(()=>validateVehicle(form),[form])
         const isValid=Object.keys(errors).length===0
-        const showErrors=Object.keys(touched).length>0 && !isValid
+        
 
         const set=(key)=>(errs)=>{
             let value=errs.target.value
-            if(key=='license_plate') value=value.toUpperCase().replace(/[^A-Z0-9]/g,'')
-            if(key=='vin') value=value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,VIN_LENGTH)
+            if(key=='license_plate') value=normalizePlate(value)
+            if(key=='vin') value=normalizeVin(value)
             setForm(f=>({...f,[key]:value}))
             if(status.type!=='idle') setStatus({type:'idle',text:''})
+            
         }
         const blur=(key)=>()=>{setTouched(t=>({...t,[key]:true}))}
 
@@ -126,7 +111,7 @@ export default function AddVehicle({onDone}){
             setTouched({department_id:true,manufacturer:true,model:true,year:true,license_plate:true,vin:true})
             if(!isValid) return
             setStatus({type:'saving',text:'Guardando vehículo...'})
-            const license_plate=form.license_plate.toUpperCase().replace(/[^A-Z0-9]/g,'')
+            const license_plate=normalizePlate(form.license_plate)
             let imagePath=null
             if(photo){
                 const ext=photo.file.name.split('.').pop().toLowerCase()
@@ -139,7 +124,7 @@ export default function AddVehicle({onDone}){
             }
             const{error}=await supabase.from('vehicles').insert({
                 department_id:Number(form.department_id),
-                manufacturer:form.manufacturer.trim().replace(/\b\w/g,c=>c.toUpperCase()),
+                manufacturer:formatManufacturer(form.manufacturer),
                 model:form.model.trim(),
                 year:form.year ? Number(form.year) : null,
                 license_plate:license_plate,

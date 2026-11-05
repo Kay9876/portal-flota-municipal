@@ -94,7 +94,6 @@ export default function Homepage({ user, onSignOut }) {
 
       <main className="main-content">
         <header className="page-header">
-          <div className="search-wrap"><input type="search" placeholder="Buscar..." aria-label="Buscar" onChange={() => {}} /></div>
           <div className="user-profile">
             <span className="avatar">{displayName.slice(0, 2).toUpperCase()}</span>
             <div><strong>{displayName}</strong><p>{profileLoading ? 'Cargando perfil…' : roleLabel}</p></div>

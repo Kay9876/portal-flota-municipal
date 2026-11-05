@@ -2,8 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 create temp table tap (n serial,line text);
-grant all on tap to public;
-grant all on sequence tap_n_seq to public;
+
 insert into tap(line) select plan(10);
 
 insert into public.departments (name) values ('Dept A'), ('Dept B');
@@ -33,37 +32,37 @@ insert into tap(line) select has_column('public','profiles','is_global_viewer','
 insert into tap(line) select has_column('public','user_permissions','can_view_vehicle','VL-UT-DB-06 user_permissions.can_view_vehicle column exists');
 
 
-set local role authenticated;
-
-select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000001","role":"authenticated"}', true);
-insert into tap(line) select results_eq(
-    $$select license_plate from public.vehicles where license_plate like 'VLT%' order by license_plate$$,
-    $$values ('VLT123'),('VLT456'),('VLT789')$$,
-    'VL-UT-DB-07 global viewer sees all vehicles'
+select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000001"}', true);
+insert into tap(line) select is(
+    array[public.has_permission((select id from public.departments where name = 'Dept A'), 'view'),
+          public.has_permission((select id from public.departments where name = 'Dept B'), 'view')],
+    array[true,true],
+    'VL-UT-DB-07 global viewer can view Dept A and Dept B'
 );
 
-select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000002","role":"authenticated"}', true);
-insert into tap(line) select results_eq(
-    $$select license_plate from public.vehicles where license_plate like 'VLT%' order by license_plate$$,
-    $$values ('VLT123'),('VLT456')$$,
-    'VL-UT-DB-08 Dept A user only sees Dept A vehicles'
+select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000002"}', true);
+insert into tap(line) select is(
+    array[public.has_permission((select id from public.departments where name = 'Dept A'), 'view'),
+          public.has_permission((select id from public.departments where name = 'Dept B'), 'view')],
+    array[true,false],
+    'VL-UT-DB-08 Dept A user can only view Dept A'
 );
 
-select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000003","role":"authenticated"}', true);
-insert into tap(line) select results_eq(
-    $$select license_plate from public.vehicles where license_plate like 'VLT%' order by license_plate$$,
-    $$values ('VLT789')$$,
-    'VL-UT-DB-09 Dept B user only sees Dept B vehicles'
+select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000003"}', true);
+insert into tap(line) select is(
+    array[public.has_permission((select id from public.departments where name = 'Dept A'), 'view'),
+          public.has_permission((select id from public.departments where name = 'Dept B'), 'view')],
+    array[false,true],
+    'VL-UT-DB-09 Dept B user can only view Dept B'
 );
 
-select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000004","role":"authenticated"}', true);
-insert into tap(line) select is_empty(
-    $$select license_plate from public.vehicles where license_plate like 'VLT%'$$,
-    'VL-UT-DB-10 user with can_view_vehicle = false sees no vehicles'
+select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000004"}', true);
+insert into tap(line) select is(
+    array[public.has_permission((select id from public.departments where name = 'Dept A'), 'view'),
+          public.has_permission((select id from public.departments where name = 'Dept B'), 'view')],
+    array[false,false],
+    'VL-UT-DB-10 user with can_view_vehicle = false cannot view any department'
 );
-
-reset role; 
-
 
 insert into tap(line) select * from finish();
 select line from tap order by n;

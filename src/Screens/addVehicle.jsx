@@ -134,7 +134,7 @@ export default function AddVehicle({onDone}){
             if(error){
                 if (imagePath) await supabase.storage.from(PHOTO_BUCKET).remove([imagePath])
                 let text = 'No se pudo guardar el vehículo.'
-                if(error.code==='23505') text='Ya existe un vehículo con la misma matrícula o VIN.'
+                if(error.code==='23505') text='Ya existe un vehículo con la misma tablilla o VIN.'
                 setStatus({type:'error',text})
                 return
             }
@@ -233,7 +233,7 @@ export default function AddVehicle({onDone}){
                                 ))}
                             </select>
                         </Field>
-                        <Field id="license_plate" label="Matrícula" error={errors.license_plate} touched={touched.license_plate}>
+                        <Field id="license_plate" label="Tablilla" error={errors.license_plate} touched={touched.license_plate}>
                             <input
                                 type="text"
                                 id="license_plate"

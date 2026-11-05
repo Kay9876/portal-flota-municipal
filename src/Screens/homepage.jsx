@@ -90,7 +90,6 @@ export default function Homepage({ user, onSignOut }) {
             </button>
           ))}
         </nav>
-        <div className="sidebar-footer"><span className="sidebar-footer-dot" /> Portal de Flota Municipal</div>
       </aside>
 
       <main className="main-content">

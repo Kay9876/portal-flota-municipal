@@ -5,7 +5,7 @@ import {
   Building2, CalendarDays, KeyRound, ChartNoAxesCombined, Users, Settings, LogOut,
 } from 'lucide-react'
 import { supabase } from '../supabaseClient'
-import escudoVA from '../assets/escudoVA.png'
+import escudoVA from 'url:../assets/escudoVA.png'
 import AddVehicle from './addVehicle'
 import AdminUsers from './adminIT/AdminUsers'
 import AddFuel from './addFuel'

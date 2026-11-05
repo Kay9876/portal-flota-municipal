@@ -97,7 +97,7 @@ export default function AddFuel({onDone}){
         async function scanTicket(file){
             if(!file) return
             if(!SCAN_TYPES.includes(file.type)){
-                setScanNotice({type:'error',text:`Tipo de archivo no soportado. Solo se permiten: ${SCAN_TYPES.join(', ')}`})
+                setScanNotice({type:'error',text:`Tipo de archivo no soportado. Solo se permiten: PDF, JPG, PNG y WEBP`})
                 return
             }
             if(file.size>SCAN_MAX_MB*1024*1024){
@@ -158,7 +158,7 @@ export default function AddFuel({onDone}){
             setScanPlate(plateRead)
 
             const match=plateRead ? vehicles.find(v=>normalizePlate(v.license_plate)===normalizePlate(plateRead)) : null
-            let notice={type:'ok',text:'Boleto leido con AI'}
+            let notice={type:'ok',text:'Boleto leído con AI'}
 
             if(!form.vehicle_id){
                 if(match){
@@ -219,7 +219,7 @@ export default function AddFuel({onDone}){
             setStatus({type:'error',text:`Error al guardar el registro: ${error.message}`})
             return
            }
-           setStatus({type:'success',text:'Registro guardado correctamente'})
+           setStatus({type:'success',text:'Registro guardado correctamente.'})
            resetForm()
         }
 
@@ -256,7 +256,7 @@ export default function AddFuel({onDone}){
                 <div className="av-heading">
                     <div>
                     <h1>Registrar Combustible</h1>
-                    <p>Autoruzacion para Despacho de Combustible</p>
+                    <p>Autorización para Despacho de Combustible</p>
                 </div>
                 {onDone &&(
                     <button type="button" className="av-btn av-btn-secondary" onClick={onDone}>
@@ -268,8 +268,8 @@ export default function AddFuel({onDone}){
                     <div className="av-card af-scan">
                         <span className="af-scan-icon"><ScanLine size={26} /></span>
                     <div className="af-scan-text">
-                    <strong>¿Tiene el boleto en papel</strong>
-                    <p>Escanealo y el asistente llenara los campos vacios</p>
+                    <strong>¿Tiene el boleto en papel?</strong>
+                    <p>Escanéalo y el asistente llenará los campos vacíos.</p>
                     </div>
                     <button type="button" className="av-btn av-btn-primary" onClick={()=>fileInputRef.current?.click()} disabled={busy}>
                         {scanning ? 
@@ -286,7 +286,7 @@ export default function AddFuel({onDone}){
                 </div>
                 {scanNotice.type==='ok' && <div className="av-alert av-alert-ok"><CheckCircle2 size={16} /> {scanNotice.text}</div>
                 }
-                {scanNotice.type==='warning' && <div className="av-alert af-alert-warning"><AlertCircle size={16} /> {scanNotice.text}</div>
+                {scanNotice.type==='warning' && <div className="av-alert af-alert-warning"><AlertTriangle size={16} /> {scanNotice.text}</div>
                 }
                 {scanNotice.type==='error' && <div className="av-alert av-alert-error"><AlertCircle size={16} /> {scanNotice.text}</div>
                 }
@@ -408,7 +408,7 @@ export default function AddFuel({onDone}){
                     </Field>
 
                     {selectedVehicle && (
-                        <p>Tablilla:<strong>{selectedVehicle.license_plate}</strong> Fabricante:<strong>{selectedVehicle.manufacturer}</strong> Modelo:<strong>{selectedVehicle.model}</strong> Departamento:<strong>{selectedVehicle.departments?.name||'N/A'}</strong></p>
+                        <p>Tablilla: <strong>{selectedVehicle.license_plate}</strong> · Fabricante:  <strong>{selectedVehicle.manufacturer}</strong> · Modelo: <strong>{selectedVehicle.model}</strong> · Departamento: <strong>{selectedVehicle.departments?.name||'N/A'}</strong></p>
                     )}
                     {!isContainer&&(
                         <Field {...fp('mileage')} label="Millaje del Vehículo">

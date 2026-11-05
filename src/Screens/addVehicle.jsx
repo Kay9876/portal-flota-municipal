@@ -160,7 +160,7 @@ export default function AddVehicle({onDone}){
                 <div className="av-heading">
                     <div>
                     <h1>Agregar Vehículo</h1>
-                    <p>Registra un vehiculo nuevo en la flota municipal.</p>
+                    <p>Registra un vehículo nuevo en la flota municipal.</p>
                 </div>
                 {onDone &&(
                     <button type="button" className="av-btn av-btn-secondary" onClick={onDone}>

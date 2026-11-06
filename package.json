@@ -29,7 +29,7 @@
     "@parcel/source-map": "^2.1.1",
     "buffer": "^6.0.3",
     "parcel": "^2.16.4",
-    "supabase": "^2.122.0",
+    "supabase": "^2.122.1",
     "vitest": "^5.1.0"
   },
   "allowScripts": {

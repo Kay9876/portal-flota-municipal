@@ -219,6 +219,9 @@ export default function AddFuel({onDone}){
             setStatus({type:'error',text:`Error al guardar el registro: ${error.message}`})
             return
            }
+           if(scanId && vehicleId){
+            await supabase.from('document_scans').update({vehicle_id:vehicleId}).eq('id',scanId)
+           }
            setStatus({type:'success',text:'Registro guardado correctamente.'})
            resetForm()
         }

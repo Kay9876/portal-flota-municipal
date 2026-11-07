@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { normalizeVin, isValidVin } from '../utils/vehicleInfo'
 
 export default function VehicleGeneralTab({
 vehicle,
@@ -9,6 +10,7 @@ onVehicleUpdated
 
 const [vinError, setVinError] = useState('')
 const [isEditing, setIsEditing] = useState(false)
+const [canEdit, setCanEdit] = useState(false)
 
 const [formData, setFormData] = useState({
     license_plate: vehicle.license_plate || '',
@@ -43,18 +45,64 @@ const handleCancel = () => {
     })
 
     setIsEditing(false)
+    setVinError('')
 }
 
 const handleSave = async (e) => {
     e.preventDefault()
 
-    const vin = formData.vin.trim().toUpperCase()
+    // const vin = formData.vin.trim().toUpperCase()
 
-    if (vin !== '' && !/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) {
-        setVinError('El VIN debe contener 17 caracteres válidos.')
+    // if (vin !== '' && !/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) {
+    //     setVinError('El VIN debe contener 17 caracteres válidos.')
+    //     return
+    // }
+
+    // setVinError('')
+
+    if (!canEdit) return
+
+    
+    const requiredFields = [
+        ['license_plate', 'La tablilla'],
+        ['manufacturer', 'La marca'],
+        ['model', 'El modelo'],
+        ['year', 'El año'],
+        ['vin', 'El VIN'],
+        ['total_mileage', 'El millaje total']
+    ]
+
+    for (const [field, label] of requiredFields) {
+        if (String(formData[field] ?? '').trim() === '') {
+            console.error(`Error: ${label} es obligatorio.`)
+            return
+        }
+    }
+
+    if (
+        formData.year !== '' &&
+        (!Number.isInteger(Number(formData.year)) || Number(formData.year) <= 0)
+    ) {
+        console.error('Error: El año debe ser un número entero positivo.')
         return
     }
 
+    
+    if (
+        formData.total_mileage !== '' &&
+        (!Number.isFinite(Number(formData.total_mileage)) ||
+        Number(formData.total_mileage) < 0)
+    ) {
+        console.error('Error: El millaje no puede ser negativo.')
+        return
+    }
+
+    const vin = normalizeVin(formData.vin)
+
+    if (!isValidVin(formData.vin)) {
+        setVinError('El VIN debe contener 17 caracteres válidos.')
+        return
+    }
     setVinError('')
 
     if (formData.department_id === '' || formData.is_active == null) {
@@ -136,16 +184,58 @@ const editableFields = [
     ['Estado', 'is_active', 'select']
 ]
 
+useEffect(() => {
+    async function checkPermission() {
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (!user) {
+            setCanEdit(false)
+            return
+        }
+
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('is_active')
+            .eq('id', user.id)
+            .maybeSingle()
+
+        if (profile?.is_active !== true) {
+            setCanEdit(false)
+            return
+        }
+
+        if (profile?.is_active !== true) {
+            setCanEdit(false)
+            return
+        }
+
+        const { data, error } = await supabase
+            .from('user_permissions')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('department_id', vehicle.department_id)
+            .eq('can_update_vehicle', true)
+            .limit(1)
+
+        setCanEdit(!error && (data?.length ?? 0) > 0)
+    }
+
+    setCanEdit(false)
+    checkPermission()
+}, [vehicle.department_id])
+
 return (
 <section className="card vdi-information">
     <div className="vdi-general-header">
     <h2>Datos del vehículo</h2>
-    <button
-        type="button"
-        className="admin-button primary"
-        onClick={() => setIsEditing(true)}>
+    {canEdit && (
+        <button
+            type="button"
+            className="admin-button primary"
+            onClick={() => setIsEditing(true)}>
             Editar
-    </button>
+        </button>
+    )}
     </div>
 
     <div className="vdi-details-grid">
@@ -157,7 +247,7 @@ return (
     ))}
     </div>
 
-    {isEditing && (
+    {isEditing && canEdit && (
         <div className="vdi-modal-overlay">
             <div className="vdi-modal">
             <h2>Editar información del vehículo</h2>
@@ -194,6 +284,7 @@ return (
                                 type={type}
                                 value={formData[field]}
                                 onChange={handleChange}
+                                required={field === 'vin'}
                             />
                             {field === 'vin' && vinError && (
                                 <span className="error-message">{vinError}</span>

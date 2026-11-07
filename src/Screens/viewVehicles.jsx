@@ -4,6 +4,7 @@ import { supabase } from '../supabaseClient'
 import './viewVehicles.css'
 import carPlaceholder from 'url:../assets/carplaceholder.png'
 import AddVehicle from './addVehicle'
+import { deptName, isVehicleActive, canCreateVehicle, getDepartmentOptions, filterVehicles } from '../utils/vehicleList'
 
 const PHOTO_BUCKET = 'vehicle-photos'
 
@@ -71,9 +72,7 @@ export default function ViewVehicles({ pressViewVehicle }) {
         supabase.from('profiles').select('is_admin').eq('id', uid).maybeSingle(),
       ])
       if (cancelled) return
-      const hasPermission = (perm.data?.length ?? 0) > 0
-      const isAdmin = prof.data?.is_admin === true // quita esta línea y el "|| isAdmin" si solo quieres can_create_vehicle
-      setCanCreate(hasPermission || isAdmin)
+            setCanCreate(canCreateVehicle(perm.data, prof.data))
     }
 
     loadCanCreate()
@@ -82,25 +81,11 @@ export default function ViewVehicles({ pressViewVehicle }) {
 
 
 
-  const deptName = (v) => v.departments?.name ?? `Departamento ${v.department_id}`
 
-  const departmentOptions = useMemo(() => {
-    const seen = new Map()
-    vehicles.forEach((v) => {
-      if (!seen.has(v.department_id)) seen.set(v.department_id, deptName(v))
-    })
-    return [...seen].sort((a, b) => a[1].localeCompare(b[1], 'es'))
-  }, [vehicles])
 
-  const visible = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    return vehicles.filter((v) => {
-      if (departmentId && String(v.department_id) !== departmentId) return false
-      if (!q) return true
-      return [v.license_plate, v.manufacturer, v.model, v.year, deptName(v)]
-        .some((x) => String(x ?? '').toLowerCase().includes(q))
-    })
-  }, [vehicles, search, departmentId])
+  const departmentOptions = useMemo(() => getDepartmentOptions(vehicles), [vehicles])
+
+  const visible = useMemo(() => filterVehicles(vehicles, search, departmentId), [vehicles, search, departmentId])
 
   if (adding) {
     return (
@@ -222,8 +207,8 @@ export default function ViewVehicles({ pressViewVehicle }) {
                     <td data-label="Matrícula"><span className="vv-plate">{v.license_plate}</span></td>
                     <td data-label="Departamento">{deptName(v)}</td>
                     <td data-label="Estado">
-                      <span className={'vv-pill ' + (v.is_active !== false ? 'vv-pill-on' : 'vv-pill-off')}>
-                        {v.is_active !== false ? 'Activo' : 'Fuera de servicio'}
+                      <span className={'vv-pill ' + (isVehicleActive(v)? 'vv-pill-on' : 'vv-pill-off')}>
+                        {isVehicleActive(v) ? 'Activo' : 'Fuera de servicio'}
                       </span>
                     </td>
                     <td data-label="Imagen">

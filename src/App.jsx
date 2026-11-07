@@ -201,6 +201,7 @@ import { supabase } from './supabaseClient'
 import './App.css'
 import Homepage from './Screens/homepage'
 import LoginPage from './Screens/loginPage'
+import { getAuthScreen } from './utils/login'
 
 // function Login() {
 //   const [email, setEmail] = useState('')
@@ -331,11 +332,11 @@ export default function App() {
     return () => data.subscription.unsubscribe()
   }, [])
 
-  const mustChangePassword = session?.user?.user_metadata?.must_change_password === true
+    const screen = getAuthScreen(session, recovering)
 
-  if (!session) return <LoginPage />
-  if (recovering) return <LoginPage key="recovery" forceChange recovery />
-  if (mustChangePassword) return <LoginPage key="force-change" forceChange />
+  if (screen === 'login') return <LoginPage />
+  if (screen === 'recovery') return <LoginPage key="recovery" forceChange recovery />
+  if (screen === 'force-change') return <LoginPage key="force-change" forceChange />
 
   return (
     <Homepage

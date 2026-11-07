@@ -4,42 +4,10 @@ import { useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import escudoLogo from 'url:../assets/escudoVA.png'
+import { MIN_PASSWORD, friendlyError, validateNewPassword, getSubmitLabel, getForceChangeMessage, requestPasswordReset } from '../utils/login'
 import { createClient } from '@supabase/supabase-js'
 
 
-const MIN_PASSWORD = 8
-
-
-function friendlyError(error) {
-  const code = error?.code || ''
-  const text = (error?.message || '').toLowerCase()
-
-  if (code === 'invalid_credentials' || text.includes('invalid login credentials')) {
-    return 'Correo electrónico o contraseña incorrecta.'
-  }
-  if (code === 'email_not_confirmed' || text.includes('email not confirmed')) {
-    return 'Debes confirmar tu correo electrónico antes de entrar.'
-  }
-  if (code === 'user_already_exists' || text.includes('already registered')) {
-    return 'Ya existe una cuenta con ese correo electrónico.'
-  }
-  if (error?.status === 429 || code.includes('rate_limit') || text.includes('rate limit')) {
-    return 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.'
-  }
-  if (error?.name === 'AuthRetryableFetchError' || text.includes('fetch')) {
-    return 'No se pudo conectar con el servidor. Revisa tu conexión a internet.'
-  }
-  return error?.message || 'No se pudo completar la solicitud. Inténtalo de nuevo.'
-}
-
-function validateNewPassword(newPassword, confirmPassword) {
-  if (newPassword.length < MIN_PASSWORD) {
-    return `La contraseña debe tener al menos ${MIN_PASSWORD} caracteres.`
-  }
-  if (newPassword != confirmPassword) {
-    return 'Las contraseñas no coinciden.'
-  }
-}
 
 function PasswordField({ id, label, value, onChange, autoComplete, show, onToggle, hint, minLength, autoFocus }) {
   return (
@@ -117,14 +85,7 @@ export default function LoginPage({forceChange = false, recovery = false}) {
         })
         if (error) setMsg({ type: 'error', text: friendlyError(error) })
       } else if (mode === 'forgot') {
-        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-          redirectTo: window.location.origin,
-        })
-        if (error) {
-          setMsg({ type: 'error', text: friendlyError(error) })
-        } else {
-          setMsg({ type: 'ok', text: 'Si el correo está registrado, recibirás un enlace para crear una contraseña nueva.' })
-        }
+            setMsg(await requestPasswordReset(supabase, email, window.location.origin))
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
         if (error) setMsg({ type: 'error', text: friendlyError(error) })
@@ -138,11 +99,7 @@ export default function LoginPage({forceChange = false, recovery = false}) {
 
   const toggleShow = () => setShowPassword((v) => !v)
 
-  let submitLabel
-  if (loading) submitLabel = forceChange ? 'Guardando...' : 'Entrando...'
-  else if (forceChange) submitLabel = 'Guardar nueva contraseña'
-  else if (mode === 'forgot') submitLabel = 'Restablecer contraseña'
-  else submitLabel = 'Iniciar sesión'
+  const submitLabel = getSubmitLabel(loading, forceChange, mode)
 
   return (
     <main className="login-page">
@@ -169,9 +126,7 @@ export default function LoginPage({forceChange = false, recovery = false}) {
 
         {forceChange && (
           <div className="msg ok" role="status">
-            {recovery
-              ? 'Elige una contraseña nueva para tu cuenta.'
-              : 'Esta es tu primera vez entrando al portal. Debes cambiar tu contraseña a una diferente a la que se te ha proveído.'}
+            {getForceChangeMessage(recovery)}
             </div>
             )}
 

@@ -129,7 +129,8 @@ export default function AddVehicle({onDone}){
                 year:form.year ? Number(form.year) : null,
                 license_plate:license_plate,
                 vin:form.vin,
-                image_path:imagePath
+                image_path:imagePath,
+                is_active:true
             })
             if(error){
                 if (imagePath) await supabase.storage.from(PHOTO_BUCKET).remove([imagePath])

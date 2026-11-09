@@ -1,8 +1,23 @@
-   ---
-   ---
+---
+---
 
-   $header-bg-color: #0d3d5d;
-   $header-bg-color-secondary: #0d3d5d;
-   $section-headings-color: #0d3d5d;
+$header-bg-color: #0d3d5d;
+$header-bg-color-secondary: #0d3d5d;
+$section-headings-color: #0d3d5d;
 
-   @import "{{ site.theme }}";
+@import "{{ site.theme }}";
+
+.page-header {
+    background-color: #123b59;
+    background-image:
+        linear-gradient(
+            rgba(9, 35, 55, 0.75),
+            rgba(9, 35, 55, 0.75)
+        ),
+        url("EscudoVegaAlta.png");
+
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+   
+}

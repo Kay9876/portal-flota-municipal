@@ -5,7 +5,7 @@ import {
   Building2, CalendarDays, KeyRound, ChartNoAxesCombined, Users, Settings, LogOut,
 } from 'lucide-react'
 import { supabase } from '../supabaseClient'
-import escudoVA from '../assets/escudoVA.png'
+import escudoVA from 'url:../assets/escudoVA.png'
 import AddVehicle from './addVehicle'
 import AdminUsers from './adminIT/AdminUsers'
 import AddFuel from './addFuel'
@@ -90,12 +90,10 @@ export default function Homepage({ user, onSignOut }) {
             </button>
           ))}
         </nav>
-        <div className="sidebar-footer"><span className="sidebar-footer-dot" /> Portal de Flota Municipal</div>
       </aside>
 
       <main className="main-content">
         <header className="page-header">
-          <div className="search-wrap"><input type="search" placeholder="Buscar..." aria-label="Buscar" onChange={() => {}} /></div>
           <div className="user-profile">
             <span className="avatar">{displayName.slice(0, 2).toUpperCase()}</span>
             <div><strong>{displayName}</strong><p>{profileLoading ? 'Cargando perfil…' : roleLabel}</p></div>

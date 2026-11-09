@@ -73,3 +73,4 @@
 .af-swatch { display: inline-block; width: 14px; height: 14px; border-radius: 4px; }
 .af-swatch-ai { background: #eef6ff; border: 1px solid #a9c8e8; }
 .af-swatch-doubt { background: #fff7e0; border: 1px solid #e0a800; }
+.af-check.has-error { border-color: var(--av-red); background: var(--av-red-bg); }

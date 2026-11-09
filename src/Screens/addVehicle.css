@@ -302,3 +302,17 @@
 .av-photo-placeholder p { margin: 0; color: var(--av-muted); font-size: 0.9rem; }
 
 .av-form { max-width: 760px; }
+
+.av-photo-preview {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.av-photo-preview img {
+    width: 160px;
+    height: 110px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}

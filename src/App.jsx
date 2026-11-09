@@ -201,6 +201,7 @@ import { supabase } from './supabaseClient'
 import './App.css'
 import Homepage from './Screens/homepage'
 import LoginPage from './Screens/loginPage'
+import { getAuthScreen } from './utils/login'
 
 // function Login() {
 //   const [email, setEmail] = useState('')
@@ -319,20 +320,29 @@ function Home({ session }) {
 
 export default function App() {
   const [session, setSession] = useState(null)
+  const [recovering, setRecovering] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
-    const { data } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
+    const { data } = supabase.auth.onAuthStateChange((_e, s) => {
+      setSession(s)
+      if (_e === 'PASSWORD_RECOVERY') setRecovering(true)
+      if (_e === 'USER_UPDATED' || _e === 'SIGNED_OUT') setRecovering(false)
+    })
     return () => data.subscription.unsubscribe()
   }, [])
 
-  return session ? (
+    const screen = getAuthScreen(session, recovering)
+
+  if (screen === 'login') return <LoginPage />
+  if (screen === 'recovery') return <LoginPage key="recovery" forceChange recovery />
+  if (screen === 'force-change') return <LoginPage key="force-change" forceChange />
+
+  return (
     <Homepage
       user={session.user}
       onSignOut={() => supabase.auth.signOut()}
     />
-  ) : (
-    <LoginPage />
   )
 
   // For testing purposes, we can return the Homepage component directly with a test user 

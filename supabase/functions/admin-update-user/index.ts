@@ -30,9 +30,11 @@ Deno.serve(async (req) => {
   if (!userId) return respond({ error: 'Falta el identificador del usuario.' }, 400)
   const email = text(body.email).toLowerCase()
   const firstName = text(body.first_name)
-  const password = typeof body.password === 'string' ? body.password : ''
+  // Password changes are not allowed through the administrator update endpoint.
+  if (typeof body.password === 'string' && body.password.length > 0) {
+    return respond({ error: 'Los administradores no pueden cambiar la contraseña de otros usuarios.' }, 403)
+  }
   if (!firstName || !/^\S+@\S+\.\S+$/.test(email)) return respond({ error: 'Incluye un nombre y un correo válido.' }, 400)
-  if (password && password.length < 8) return respond({ error: 'La contraseña debe tener al menos 8 caracteres.' }, 400)
   const departmentId = body.department_id === null || body.department_id === '' || body.department_id === undefined ? null : Number(body.department_id)
   if (departmentId !== null && (!Number.isSafeInteger(departmentId) || departmentId < 1)) return respond({ error: 'Departamento inválido.' }, 400)
 
@@ -47,8 +49,8 @@ Deno.serve(async (req) => {
     if ((count || 0) <= 1) return respond({ error: 'No puedes desactivar o degradar al último administrador activo.' }, 400)
   }
 
-  const authUpdate: { email?: string; password?: string } = { email }
-  if (password) authUpdate.password = password
+  // Only update the email here; never modify the target user's password.
+  const authUpdate: { email?: string } = { email }
   const { error: authUpdateError } = await admin.auth.admin.updateUserById(userId, authUpdate)
   if (authUpdateError) return respond({ error: `No se pudo actualizar la cuenta de autenticación: ${authUpdateError.message}` }, 400)
 

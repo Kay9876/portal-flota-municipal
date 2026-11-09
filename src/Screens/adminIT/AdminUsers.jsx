@@ -96,7 +96,6 @@ export default function AdminUsers({ onBack }) {
       if (!form.first_name.trim()) throw new Error('El nombre es obligatorio.')
       if (!form.email.trim() || !/^\S+@\S+\.\S+$/.test(form.email.trim())) throw new Error('Escribe un correo electrónico válido.')
       if (!editing && form.password.length < 8) throw new Error('La contraseña inicial debe tener al menos 8 caracteres.')
-      if (editing && form.password && form.password.length < 8) throw new Error('La nueva contraseña debe tener al menos 8 caracteres.')
       const payload = {
         first_name: form.first_name.trim(), last_name: form.last_name.trim(),
         second_last_name: form.second_last_name.trim(), email: form.email.trim().toLowerCase(),
@@ -107,7 +106,7 @@ export default function AdminUsers({ onBack }) {
       }
       const successText = editing ? 'Los cambios del usuario se guardaron correctamente.' : 'El usuario se creó correctamente.'
       if (editing) {
-        await invokeAdminFunction('admin-update-user', { user_id: editing.id, ...payload, password: form.password || undefined })
+        await invokeAdminFunction('admin-update-user', { user_id: editing.id, ...payload })
       } else {
         await invokeAdminFunction('admin-create-user', { ...payload, password: form.password })
       }
@@ -181,7 +180,7 @@ export default function AdminUsers({ onBack }) {
             <label className="admin-field">Apellido<input name="last_name" value={form.last_name} onChange={updateField} autoComplete="family-name" /></label>
             <label className="admin-field">Segundo apellido<input name="second_last_name" value={form.second_last_name} onChange={updateField} /></label>
             <label className="admin-field">Correo electrónico *<input name="email" type="email" value={form.email} onChange={updateField} required autoComplete="email" /></label>
-            <label className="admin-field">{editing ? 'Nueva contraseña (opcional)' : 'Contraseña inicial *'}<input name="password" type="password" value={form.password} onChange={updateField} minLength={8} required={!editing} autoComplete="new-password" placeholder={editing ? 'Dejar en blanco para conservarla' : 'Mínimo 8 caracteres'} /></label>
+            {!editing && <label className="admin-field">Contraseña inicial *<input name="password" type="password" value={form.password} onChange={updateField} minLength={8} required autoComplete="new-password" placeholder="Mínimo 8 caracteres" /></label>}
             <label className="admin-field">Departamento<select name="department_id" value={form.department_id} onChange={updateField}><option value="">Sin departamento</option>{departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</select></label>
           </div>
 

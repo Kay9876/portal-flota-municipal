@@ -3,6 +3,9 @@ import {CheckCircle2, AlertCircle,AlertTriangle,ScanLine,FileText,CarFront,UserC
 import { supabase } from "../supabaseClient";
 import './addVehicle.css'
 import './addFuel.css'
+import { NO_VEHICLE,toNumber,aiValueToForm,isEmpty,validateFuel } from "../utils/fuelHelpers";
+import { normalizePlate } from "../utils/vehicleValidation";
+
 
 const emptyForm = {
 vehicle_id: '',
@@ -27,55 +30,11 @@ supplier_name:'',
 supplier_signature:false
 }
 
-const NO_VEHICLE='none'
 const TEMPLATE_SLUG='despacho_combustible'
 const SCAN_BUCKET='scans'
 const SCAN_TYPES=['image/jpeg','image/png','image/webp','application/pdf']
 const SCAN_MAX_MB=10
 
-function toNumber(value){
-    return value==='' ? null:Number(value)
-}
-
-function toText(value){
-    return value.trim()||null
-}
-
-function normalizePlate(plate){
-    return (plate||'').toUpperCase().replace(/[^A-Z0-9]/g,'')
-}
-
-function toIsoDate(text){
-    const match=String(text||'').replace(/\s/g,'').match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})$/)
-    if(!match) return ''
-    let [,month,day,year]=match
-    if(year.length===2) year='20'+year
-    if(Number(month)<1 || Number(month)>12 || Number(day)<1 || Number(day)>31) return ''
-    return `${year}-${month.padStart(2,'0')}-${day.padStart(2,'0')}`
-}
-
-function aiValueToForm(value,dataType,field){
-    if(value==null||value===''||value===undefined) return null
-    if(dataType==='date') return toIsoDate(value)||null
-    if(dataType==='boolean') return value===true
-    if(field==='fuel_type'){
-        const fuel=String(value||'').toLowerCase()
-        if(fuel.includes('gasolina')) return 'gasolina'
-        if(fuel.includes('diesel')) return 'diesel'
-        return null
-    }
-    return String(value||'').trim()
-}
-
-function isEmpty(value){
-    return value==='' || value===false || value===null
-}
-
-
-// function photoUrl(path){
-//     if (!path) return null;
-//     return supabase.storage.from(PHOTO_BUCKET).getPublicUrl(path).data.publicUrl;   
-// }
 
 export default function AddFuel({onDone}){
     const [departments,setDepartments]=useState([])
@@ -115,16 +74,7 @@ export default function AddFuel({onDone}){
     const selectedVehicle=vehicles.find(v=>String(v.id)===form.vehicle_id)
     const isContainer=form.vehicle_id===NO_VEHICLE
     
-        const errors=useMemo(()=>{
-            const errs={}
-            if(!form.vehicle_id) errs.vehicle_id= "Seleccione un vehículo o contenedor"
-           if(!form.fuel_type) errs.fuel_type= "Seleccione un tipo de combustible"
-              if(!form.control_number) errs.control_number= "Ingrese un número de control"
-              if(!form.dispatch_date) errs.dispatch_date= "Ingrese una fecha de despacho"
-              if(!form.requester_name.trim()) errs.requester_name= "Ingrese el nombre del solicitante"
-            if(isContainer&&!form.container_gallons) errs.container_gallons= "Ingrese la cantidad de galones"
-            return errs
-        },[form,isContainer])
+        const errors=useMemo(()=>validateFuel(form),[form])
         const isValid=Object.keys(errors).length===0
 
         const set=(key)=>(errs)=>{
@@ -147,7 +97,7 @@ export default function AddFuel({onDone}){
         async function scanTicket(file){
             if(!file) return
             if(!SCAN_TYPES.includes(file.type)){
-                setScanNotice({type:'error',text:`Tipo de archivo no soportado. Solo se permiten: ${SCAN_TYPES.join(', ')}`})
+                setScanNotice({type:'error',text:`Tipo de archivo no soportado. Solo se permiten: PDF, JPG, PNG y WEBP`})
                 return
             }
             if(file.size>SCAN_MAX_MB*1024*1024){
@@ -208,7 +158,7 @@ export default function AddFuel({onDone}){
             setScanPlate(plateRead)
 
             const match=plateRead ? vehicles.find(v=>normalizePlate(v.license_plate)===normalizePlate(plateRead)) : null
-            let notice={type:'ok',text:'Boleto leido con AI'}
+            let notice={type:'ok',text:'Boleto leído con AI'}
 
             if(!form.vehicle_id){
                 if(match){
@@ -233,23 +183,10 @@ export default function AddFuel({onDone}){
             setScanNotice(notice)
 
             }
-            
-        function removePhoto(){
-            setPhoto(null)
-            setPhotoError('')
-            if (fileInputRef.current) fileInputRef.current.value=''
-        }
-
-        function onDrop(e){
-            e.preventDefault()
-            setDragging(false)
-            const file=e.dataTransfer.files[0]
-            pickPhoto(file)
-        }
 
         async function handleSubmit(e){
             e.preventDefault()
-            setTouched({vehicle_id:true,fuel_type:true,control_number:true,dispatch_date:true,requester_name:true,container_gallons:true})
+            setTouched(Object.fromEntries(Object.keys(emptyForm).map(k=>[k,true])))
            if(!isValid) return
            setStatus({type:'saving',text:''})
            const vehicleId=isContainer ? null : Number(form.vehicle_id)
@@ -278,9 +215,14 @@ export default function AddFuel({onDone}){
             supplier_name:form.supplier_name.trim()||null,
             supplier_signature:form.supplier_signature
            })
-           if(error) setStatus({type:'error',text:`Error al guardar el registro: ${error.message}`})
-           else setStatus({type:'success',text:'Registro guardado correctamente'
-           })
+           if(error) {
+            setStatus({type:'error',text:`Error al guardar el registro: ${error.message}`})
+            return
+           }
+           if(scanId && vehicleId){
+            await supabase.from('document_scans').update({vehicle_id:vehicleId}).eq('id',scanId)
+           }
+           setStatus({type:'success',text:'Registro guardado correctamente.'})
            resetForm()
         }
 
@@ -317,7 +259,7 @@ export default function AddFuel({onDone}){
                 <div className="av-heading">
                     <div>
                     <h1>Registrar Combustible</h1>
-                    <p>Autoruzacion para Despacho de Combustible</p>
+                    <p>Autorización para Despacho de Combustible</p>
                 </div>
                 {onDone &&(
                     <button type="button" className="av-btn av-btn-secondary" onClick={onDone}>
@@ -329,8 +271,8 @@ export default function AddFuel({onDone}){
                     <div className="av-card af-scan">
                         <span className="af-scan-icon"><ScanLine size={26} /></span>
                     <div className="af-scan-text">
-                    <strong>¿Tiene el boleto en papel</strong>
-                    <p>Escanealo y el asistente llenara los campos vacios</p>
+                    <strong>¿Tiene el boleto en papel?</strong>
+                    <p>Escanéalo y el asistente llenará los campos vacíos.</p>
                     </div>
                     <button type="button" className="av-btn av-btn-primary" onClick={()=>fileInputRef.current?.click()} disabled={busy}>
                         {scanning ? 
@@ -347,7 +289,7 @@ export default function AddFuel({onDone}){
                 </div>
                 {scanNotice.type==='ok' && <div className="av-alert av-alert-ok"><CheckCircle2 size={16} /> {scanNotice.text}</div>
                 }
-                {scanNotice.type==='warning' && <div className="av-alert af-alert-warning"><AlertCircle size={16} /> {scanNotice.text}</div>
+                {scanNotice.type==='warning' && <div className="av-alert af-alert-warning"><AlertTriangle size={16} /> {scanNotice.text}</div>
                 }
                 {scanNotice.type==='error' && <div className="av-alert av-alert-error"><AlertCircle size={16} /> {scanNotice.text}</div>
                 }
@@ -469,7 +411,7 @@ export default function AddFuel({onDone}){
                     </Field>
 
                     {selectedVehicle && (
-                        <p>Tablilla:<strong>{selectedVehicle.license_plate}</strong> Fabricante:<strong>{selectedVehicle.manufacturer}</strong> Modelo:<strong>{selectedVehicle.model}</strong> Departamento:<strong>{selectedVehicle.departments?.name||'N/A'}</strong></p>
+                        <p>Tablilla: <strong>{selectedVehicle.license_plate}</strong> · Fabricante:  <strong>{selectedVehicle.manufacturer}</strong> · Modelo: <strong>{selectedVehicle.model}</strong> · Departamento: <strong>{selectedVehicle.departments?.name||'N/A'}</strong></p>
                     )}
                     {!isContainer&&(
                         <Field {...fp('mileage')} label="Millaje del Vehículo">
@@ -536,7 +478,7 @@ export default function AddFuel({onDone}){
                     <section className="av-card">
                     <h2 className="av-card-title">Despacho de Combustible</h2>
                     <div className="av-row">
-                    <Field {...fp('amount_dispatched')} label="Cantidad Despachada (gal)">
+                    <Field {...fp('amount_dispatched')} label="Cantidad Despachada ($)">
                         <input
                             type="number"
                             id="amount_dispatched"
@@ -598,9 +540,9 @@ export default function AddFuel({onDone}){
                     <Check {...fp('employee_signature')} label="Firma del Empleado que despacha" checked={form.employee_signature} onChange={set('employee_signature')} />
                     <Check {...fp('supplier_signature')} label="Firma del Proveedor" checked={form.supplier_signature} onChange={set('supplier_signature')} />
                     </div>
-                    {status.type==='error' && <div className="av-alert av-alert-info"><Loader2 size={16} className="av-spin" /> Guardando...</div>
+                    {status.type==='error' && <div className="av-alert av-alert-error"><AlertCircle size={16} /> {status.text}</div>
                     }
-                    {status.type==='success' && <div className="av-alert av-alert-ok"><CheckCircle2 size={16} /> Registro guardado correctamente</div>
+                    {status.type==='success' && <div className="av-alert av-alert-ok"><CheckCircle2 size={16} /> {status.text}</div>
                     }
                     <div className="av-actions">
                         <button type="submit" className="av-btn av-btn-primary" disabled={saving}>
@@ -632,20 +574,28 @@ export default function AddFuel({onDone}){
                 </div>
             )
         }
-        function Check({id,label,checked,onChange,ai,doubtful}){
+        function Check({id,label,checked,onChange,ai,doubtful,touched,error}){
+            const visibleError=touched && error
             const classes=['af-check']
+            if(visibleError) classes.push('has-error')
             if(doubtful) classes.push('af-doubtful')
             else if(ai) classes.push('af-ai')
             return(
-                <label className={classes.join(' ')} htmlFor={id}>
+                <div>
+                    <label className={classes.join(' ')} htmlFor={id}>
                         <input
                             type="checkbox"
                             id={id}
                             checked={checked}
                             onChange={onChange}
+                            aria-invalid={!!visibleError}
+                            aria-describedby={`${id}-error`}        
                         />
                         {label}
-                    </label>
+                        </label>
+                         {visibleError && <div className="av-error" id={`${id}-error`}>{error}</div>}
+                        </div>
             )
         }
-            
+   
+        

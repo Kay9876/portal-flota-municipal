@@ -8,7 +8,7 @@ import {
   cleanup
 } from '@testing-library/react'
 import '@testing-library/jest-dom/vitest'
-import VehicleGeneralTab from './viewVehicleGeneralTab'
+import VehicleGeneralTab from '../Screens/viewVehicleGeneralTab'
 import { supabase } from '../supabaseClient'
 import React from 'react'
 
@@ -266,44 +266,37 @@ describe('Vehicle Information - Component Tests', () => {
 
         updateMock.mockReturnValue({ eq: eqMock })
 
-        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+        renderVehicle()
 
-        try {
-            renderVehicle()
+        fireEvent.click(
+            await screen.findByRole('button', { name: 'Editar' })
+        )
+        await screen.findByRole('option', { name: 'Obras Públicas' })
 
-            fireEvent.click(
-                await screen.findByRole('button', { name: 'Editar' })
-            )
-            await screen.findByRole('option', { name: 'Obras Públicas' })
-
-            fireEvent.change(screen.getByLabelText('Departamento'), {
+        fireEvent.change(screen.getByLabelText('Departamento'), {
             target: { value: '1' }
-            })
+        })
 
-            fireEvent.change(screen.getByLabelText('Estado'), {
+        fireEvent.change(screen.getByLabelText('Estado'), {
             target: { value: 'true' }
-            })
+        })
 
-            fireEvent.submit(
+        fireEvent.submit(
             screen.getByRole('button', { name: 'Guardar cambios' }).closest('form')
-            )
+        )
 
-            await waitFor(() => {
+        await waitFor(() => {
             expect(updateMock).toHaveBeenCalled()
-            expect(consoleSpy).toHaveBeenCalledWith(
-                'Error updating vehicle:',
-                expect.objectContaining({ message: 'Database error' })
-            )
-            })
-
             expect(
+                screen.getByRole('alert').textContent
+            ).toBe('Error: No se pudieron guardar los cambios del vehículo.')
+        
+        })
+        expect(
             screen.getByText('Editar información del vehículo')
-            ).toBeInTheDocument()
+        ).toBeInTheDocument()
 
-            expect(onVehicleUpdated).not.toHaveBeenCalled()
-        } finally {
-            consoleSpy.mockRestore()
-        }
+        expect(onVehicleUpdated).not.toHaveBeenCalled()
     })
 
 

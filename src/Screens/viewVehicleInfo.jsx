@@ -196,7 +196,7 @@ useEffect(() => {
     setMaintenanceError('')
 
     const { data, error } = await supabase
-      .from('maintenance.register')
+      .from('maintenance')
       .select(`
         id,
         start_date,
@@ -667,8 +667,8 @@ useEffect(() => {
                         <td>{record.passenger_name || '—'}</td>
                         <td>{record.departure_time || '—'}</td>
                         <td>{record.arrival_time || '—'}</td>
-                        <td>{record.key_pickup_time || '—'}</td>
-                        <td>{record.key_handover_time || '—'}</td>
+                        <td>{record.key_pickup || '—'}</td>
+                        <td>{record.key_handover || '—'}</td>
                       </tr>
                     ))}
                   </tbody>

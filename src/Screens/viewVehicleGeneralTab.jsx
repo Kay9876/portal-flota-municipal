@@ -9,6 +9,7 @@ onVehicleUpdated
 }) {
 
 const [vinError, setVinError] = useState('')
+const [formError, setFormError] = useState('')
 const [isEditing, setIsEditing] = useState(false)
 const [canEdit, setCanEdit] = useState(false)
 
@@ -46,6 +47,7 @@ const handleCancel = () => {
 
     setIsEditing(false)
     setVinError('')
+    setFormError('')
 }
 
 const handleSave = async (e) => {
@@ -64,17 +66,19 @@ const handleSave = async (e) => {
 
     
     const requiredFields = [
-        ['license_plate', 'La tablilla'],
-        ['manufacturer', 'La marca'],
-        ['model', 'El modelo'],
-        ['year', 'El año'],
-        ['vin', 'El VIN'],
-        ['total_mileage', 'El millaje total']
+        ['license_plate', 'la tablilla'],
+        ['manufacturer', 'la marca'],
+        ['model', 'el modelo'],
+        ['year', 'el año'],
+        ['vin', 'el VIN'],
+        ['total_mileage', 'el millaje total']
     ]
+
+    setFormError('')
 
     for (const [field, label] of requiredFields) {
         if (String(formData[field] ?? '').trim() === '') {
-            console.error(`Error: ${label} es obligatorio.`)
+            setFormError(`Debe ingresar ${label} del vehículo.`)
             return
         }
     }
@@ -83,7 +87,7 @@ const handleSave = async (e) => {
         formData.year !== '' &&
         (!Number.isInteger(Number(formData.year)) || Number(formData.year) <= 0)
     ) {
-        console.error('Error: El año debe ser un número entero positivo.')
+        setFormError('El año debe ser un número entero positivo.')
         return
     }
 
@@ -93,7 +97,7 @@ const handleSave = async (e) => {
         (!Number.isFinite(Number(formData.total_mileage)) ||
         Number(formData.total_mileage) < 0)
     ) {
-        console.error('Error: El millaje no puede ser negativo.')
+        setFormError('El millaje no puede ser negativo.')
         return
     }
 
@@ -106,7 +110,7 @@ const handleSave = async (e) => {
     setVinError('')
 
     if (formData.department_id === '' || formData.is_active == null) {
-        console.error('Error: Departamento o estado no seleccionado.')
+        setFormError('Departamento o estado no seleccionado.')
         return
     }
 
@@ -129,7 +133,7 @@ const handleSave = async (e) => {
         .single()
 
     if (error) {
-        console.error('Error updating vehicle:', error)
+        setFormError('No se pudieron guardar los cambios del vehículo.')
         return
     }
 
@@ -204,11 +208,6 @@ useEffect(() => {
             return
         }
 
-        if (profile?.is_active !== true) {
-            setCanEdit(false)
-            return
-        }
-
         const { data, error } = await supabase
             .from('user_permissions')
             .select('id')
@@ -251,7 +250,12 @@ return (
         <div className="vdi-modal-overlay">
             <div className="vdi-modal">
             <h2>Editar información del vehículo</h2>
-            <form onSubmit={handleSave}>
+            <form onSubmit={handleSave} noValidate>
+                {formError && (
+                    <p className="msg error" role="alert">
+                        {formError}
+                    </p>
+                )}
                 <div className="vdi-form-grid">
                 {editableFields.map(([label, field, type]) => (
                     <label key={field}>
@@ -284,7 +288,6 @@ return (
                                 type={type}
                                 value={formData[field]}
                                 onChange={handleChange}
-                                required={field === 'vin'}
                             />
                             {field === 'vin' && vinError && (
                                 <span className="error-message">{vinError}</span>

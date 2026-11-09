@@ -1,9 +1,10 @@
-   # Portal de Flota Municipal
+<h2>Project description</h2>
 
-   ## Project description
-   
-   ## Group K members
-   - Yahir Figueroa
-   - Luis Sorrentini
-   - Kaysha Pagan
-   - Juan Rivera 
+(Description goes here)
+
+<h2>Group members</h2>
+
+- Yahir Figueroa
+- Luis Sorrentini
+- Kaysha Pagan
+- Juan Rivera

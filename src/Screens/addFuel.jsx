@@ -216,7 +216,9 @@ export default function AddFuel({onDone}){
             supplier_signature:form.supplier_signature
            })
            if(error) {
-            setStatus({type:'error',text:`Error al guardar el registro: ${error.message}`})
+            let text=`Error al guardar el registro: ${error.message}`
+            if(error.code==='23505' && error.details?.includes('control_number')) text='Ya existe un registro con ese número de control.'
+            setStatus({type:'error',text:text})
             return
            }
            if(scanId && vehicleId){

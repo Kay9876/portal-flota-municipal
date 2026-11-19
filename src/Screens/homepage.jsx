@@ -12,6 +12,7 @@ import AddFuel from './addFuel'
 import ViewVehicles from './viewVehicles'
 import ViewVehicleInfo from './viewVehicleInfo'
 import Departments from './departments'
+import AuditorPanel from './auditor/AuditorPanel'
 
 
 const vehicleStats = [
@@ -61,15 +62,33 @@ export default function Homepage({ user, onSignOut }) {
   }, [user.id])
 
   const isAdmin = profile?.is_admin === true && profile?.is_active !== false
+  const isAuditor = profile?.is_global_viewer === true && profile?.is_active === true
   const displayName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || user?.email || 'Usuario'
   const roleLabel = isAdmin ? 'Administrador' : profile?.is_global_viewer ? 'Visor global' : 'Usuario'
-  const sidebarItems = isAdmin ? [...baseSidebarItems,
-     { label: 'Usuarios', Icon: Users, page: 'users' },
-     { label: 'Departamentos', Icon: Building2, page: 'departments' }, 
-     { label: 'Configuración', Icon: Settings, page: 'settings' }]
-      : baseSidebarItems
+  const sidebarItems = [
+  ...baseSidebarItems,
+
+  ...(isAuditor
+    ? [
+        {
+          label: 'Panel del Auditor',
+          Icon: ChartNoAxesCombined,
+          page: 'auditor',
+        },
+      ]
+    : []),
+
+  ...(isAdmin
+    ? [
+        { label: 'Usuarios', Icon: Users, page: 'users' },
+        { label: 'Departamentos', Icon: Building2, page: 'departments' },
+        { label: 'Configuración', Icon: Settings, page: 'settings' },
+      ]
+    : []),
+]
 
   function navigate(page) {
+    if (page === 'auditor' && !isAuditor) return
     setActivePage(page)
     setShowAddVehicle(false)
     setProfileError('')
@@ -104,7 +123,9 @@ export default function Homepage({ user, onSignOut }) {
         <section className="page-content">
           {profileError && <div className="admin-alert error">No se pudo cargar tu perfil: {profileError}</div>}
           {!profileLoading && !profile && <div className="admin-alert error">No se encontró un perfil para esta cuenta. Contacta al administrador del sistema.</div>}
-          {activePage === 'users' && isAdmin ? (
+          {activePage === 'auditor' ? (
+            !profileLoading && isAuditor ? <AuditorPanel /> : <div className="admin-alert error">Acceso restringido a visores globales activos.</div>
+          ) : activePage === 'users' && isAdmin ? (
             <AdminUsers onBack={() => navigate('home')} />
           ) : showAddVehicle ? (
             <AddVehicle onDone={() => setShowAddVehicle(false)} />

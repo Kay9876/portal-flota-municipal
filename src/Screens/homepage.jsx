@@ -13,6 +13,7 @@ import ViewVehicles from './viewVehicles'
 import ViewVehicleInfo from './viewVehicleInfo'
 import Departments from './departments'
 import AuditorPanel from './auditor/AuditorPanel'
+import AddDailyLog from './addDailyLog'
 
 
 const vehicleStats = [
@@ -22,7 +23,7 @@ const vehicleStats = [
   { label: 'En mantenimiento', value: '—', Icon: Wrench, color: 'navy' },
 ]
 const quickActions = [
-  { label: 'Registrar uso diario', Icon: ClipboardList },
+  { label: 'Registrar uso diario', Icon: ClipboardList, page: 'daily' },
   { label: 'Registrar combustible', Icon: Fuel, page: 'addFuel' },
   { label: 'Registrar mantenimiento', Icon: Wrench },
   { label: 'Ver reportes', Icon: FileText },
@@ -141,6 +142,8 @@ export default function Homepage({ user, onSignOut }) {
             </>
           ) : activePage === 'addFuel' ? (
             <AddFuel onDone={()=>navigate('home')}/>
+          ): activePage === 'daily' ? (
+            <AddDailyLog onDone={()=>navigate('home')}/>
           ): activePage=== 'vehicles'?(
           selectedVehicleId!==null?(
             <ViewVehicleInfo 

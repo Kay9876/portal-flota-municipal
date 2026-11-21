@@ -14,6 +14,7 @@ import ViewVehicleInfo from './viewVehicleInfo'
 import Departments from './departments'
 import AuditorPanel from './auditor/AuditorPanel'
 import AddDailyLog from './addDailyLog'
+import ReportIssue from './reportIssue'
 
 
 const vehicleStats = [
@@ -25,7 +26,7 @@ const vehicleStats = [
 const quickActions = [
   { label: 'Registrar uso diario', Icon: ClipboardList, page: 'daily' },
   { label: 'Registrar combustible', Icon: Fuel, page: 'addFuel' },
-  { label: 'Registrar mantenimiento', Icon: Wrench },
+  { label: 'Registrar mantenimiento', Icon: Wrench, page: 'reportIssue' },
   { label: 'Ver reportes', Icon: FileText },
 ]
 const baseSidebarItems = [
@@ -144,6 +145,8 @@ export default function Homepage({ user, onSignOut }) {
             <AddFuel onDone={()=>navigate('home')}/>
           ): activePage === 'daily' ? (
             <AddDailyLog onDone={()=>navigate('home')}/>
+          ): activePage==='reportIssue'?(
+            <ReportIssue user={user} profile={profile} onDone={()=>navigate('home')}/>
           ): activePage=== 'vehicles'?(
           selectedVehicleId!==null?(
             <ViewVehicleInfo 

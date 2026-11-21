@@ -1,0 +1,32 @@
+.ri { max-width: 760px; }
+.ri-form { display: flex; flex-direction: column; gap: 16px; }
+.ri-hint { font-size: 13px; color: #5b6573; margin: 6px 0 0; }
+
+.ri-fieldset { border: 0; padding: 0; margin: 0 0 16px; min-width: 0; }
+.ri-fieldset legend { font-weight: 600; font-size: 14px; margin-bottom: 8px; color: #1f2933; }
+.ri-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.ri-options-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ri-option { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 14px; border: 1px solid #d1d5db; border-radius: 10px; cursor: pointer; font-size: 15px; background: #fff; }
+.ri-option input { width: 18px; height: 18px; margin: 0; }
+.ri-option.selected { border-color: #0f3a5c; background: #eef4fa; font-weight: 600; }
+.ri-option-urgent.selected { border-color: #dc2626; background: #fef2f2; color: #991b1b; }
+.ri-fieldset.has-error .ri-option { border-color: #fca5a5; }
+
+.ri-form textarea { width: 100%; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 8px; padding: 10px 12px; font: inherit; resize: vertical; }
+.ri-photo { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ri-check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 15px; margin-bottom: 8px; }
+.ri-check input { width: 20px; height: 20px; }
+
+.ri-trap { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+
+.ri-done { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px 20px; }
+.ri-done-icon { color: #16a34a; }
+.ri-done h1 { margin: 0; color: #0f3a5c; }
+.ri-folio { font-size: 44px; font-weight: 700; color: #0f3a5c; margin: 0; }
+.ri-done .av-actions { justify-content: center; flex-wrap: wrap; }
+
+@media (max-width: 768px) {
+  .ri-option { min-height: 52px; font-size: 16px; }
+  .ri-form input, .ri-form select, .ri-form textarea { font-size: 16px; }
+  .ri .av-actions .av-btn { width: 100%; justify-content: center; }
+}

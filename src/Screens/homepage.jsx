@@ -12,20 +12,21 @@ import AddFuel from './addFuel'
 import ViewVehicles from './viewVehicles'
 import ViewVehicleInfo from './viewVehicleInfo'
 import Departments from './departments'
+import { HomeShortcuts, HomeFleetToday } from './homeDashboard'
 
 
-const vehicleStats = [
-  { label: 'Total de vehículos', value: '—', Icon: CarFront, color: 'navy' },
-  { label: 'En uso', value: '—', Icon: Car, color: 'green' },
-  { label: 'Fuera de servicio', value: '—', Icon: TriangleAlert, color: 'red' },
-  { label: 'En mantenimiento', value: '—', Icon: Wrench, color: 'navy' },
-]
-const quickActions = [
-  { label: 'Registrar uso diario', Icon: ClipboardList },
-  { label: 'Registrar combustible', Icon: Fuel, page: 'addFuel' },
-  { label: 'Registrar mantenimiento', Icon: Wrench },
-  { label: 'Ver reportes', Icon: FileText },
-]
+// const vehicleStats = [
+//   { label: 'Total de vehículos', value: '—', Icon: CarFront, color: 'navy' },
+//   { label: 'En uso', value: '—', Icon: Car, color: 'green' },
+//   { label: 'Fuera de servicio', value: '—', Icon: TriangleAlert, color: 'red' },
+//   { label: 'En mantenimiento', value: '—', Icon: Wrench, color: 'navy' },
+// ]
+// const quickActions = [
+//   { label: 'Registrar uso diario', Icon: ClipboardList },
+//   { label: 'Registrar combustible', Icon: Fuel, page: 'addFuel' },
+//   { label: 'Registrar mantenimiento', Icon: Wrench },
+//   { label: 'Ver reportes', Icon: FileText },
+// ]
 const baseSidebarItems = [
   { label: 'Inicio', Icon: House, page: 'home' },
   { label: 'Vehículos', Icon: CarFront, page: 'vehicles' },
@@ -110,13 +111,10 @@ export default function Homepage({ user, onSignOut }) {
             <AddVehicle onDone={() => setShowAddVehicle(false)} />
           ) : activePage === 'home' ? (
             <>
-              <div className="section-heading"><div><h1>Resumen de la Flota</h1><p className="admin-subtitle">Bienvenido/a, {displayName}</p></div><span>{new Date().toLocaleDateString('es-PR', { year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
-              <div className="stats">{vehicleStats.map(({ label, value, Icon, color }) => <article className={`stat ${color}`} key={label}><span className="stat-icon"><Icon size={28} strokeWidth={2} /></span><div><p className="label">{label}</p><p className="value">{value}</p></div></article>)}</div>
-              <div className="overview-grid"><article className="card"><h2>Vehículos por departamento</h2><p>El desglose aparecerá cuando se conecte el resumen de datos de la flota.</p></article><article className="card"><h2>Gastos mensuales</h2><p>El resumen de gastos aparecerá cuando se conecten los registros de combustible y mantenimiento.</p></article></div>
-              <h2 className="actions-heading">Accesos rápidos</h2>
-              <div className="actions-grid">{quickActions.map(({ label, Icon,page }) => <button className="action-card" key={label} type="button" onClick={() => page ? navigate(page):setProfileError(`La sección “${label}” aún no está implementada.`)}><span className="action-icon"><Icon size={26} strokeWidth={2} /></span>{label}</button>)}</div>
-              <button type="button" className="btn-primary" onClick={() => setShowAddVehicle(true)}>Agregar vehículo</button>
-              {isAdmin && <div className="admin-shortcut"><div><strong>Administración del sistema</strong><p>Gestiona cuentas y permisos de acceso.</p></div><button className="admin-button primary" type="button" onClick={() => navigate('users')}><Users size={17} /> Gestionar usuarios</button></div>}
+              <div className="section-heading"><div><h1>Pagina Inicial</h1><p className="admin-subtitle">Bienvenido/a, {displayName}</p></div><span>{new Date().toLocaleDateString('es-PR', { year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
+              <HomeShortcuts onNavigate={navigate} />
+              {isAdmin && <div className="hd-between"><div className="admin-shortcut"><div><strong>Administración del sistema</strong><p>Gestiona cuentas y permisos de acceso.</p></div><button className="admin-button primary" type="button" onClick={() => navigate('users')}><Users size={17} /> Gestionar usuarios</button></div></div>}
+              <HomeFleetToday />
             </>
           ) : activePage === 'addFuel' ? (
             <AddFuel onDone={()=>navigate('home')}/>

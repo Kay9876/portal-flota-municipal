@@ -1,0 +1,255 @@
+/* Home dashboard: shortcuts + "Hoy en la flota". Uses the design tokens from App.css. */
+.hd-heading {
+  margin: 28px 0 12px;
+  color: var(--navy);
+  font-size: 1.15rem;
+}
+
+.hd-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+/* Same look as the old quick-action tiles: navy card, lime icon, centered text. */
+.hd-shortcut {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  background: var(--navy);
+  color: var(--white);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.hd-shortcut:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 18px rgba(8, 43, 70, 0.18);
+  background: var(--white);
+  color: var(--navy);
+  transform: translateY(-1px);
+}
+
+.hd-shortcut:focus-visible {
+  outline: 3px solid var(--blue-light);
+  border-color: var(--blue);
+}
+
+.hd-shortcut-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  color: var(--accent);
+  background: rgba(216, 250, 52, 0.08);
+}
+
+.hd-shortcut:hover:not(:disabled) .hd-shortcut-icon {
+  color: var(--navy);
+  background: rgba(216, 250, 52, 0.18);
+}
+
+.hd-shortcut-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.hd-shortcut-desc {
+  font-size: 0.78rem;
+  opacity: 0.75;
+}
+
+/* Placeholders: same navy tile, content dimmed, not clickable. */
+.hd-shortcut-soon {
+  cursor: not-allowed;
+}
+
+.hd-shortcut-soon > * {
+  opacity: 0.55;
+}
+
+.hd-soon {
+  margin-top: 2px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+/* First heading on the page needs no top gap. */
+.hd-heading-first {
+  margin-top: 0;
+}
+
+/* Admin box under the shortcuts. */
+.hd-between {
+  margin-top: 20px;
+}
+
+.hd-title-row {
+  margin-bottom: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hd-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 16px;
+}
+
+.hd-field label {
+  color: var(--gray);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.hd-field select {
+  min-width: 220px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  color: var(--text);
+  font: inherit;
+}
+
+.hd-field select:focus {
+  outline: 3px solid var(--blue-light);
+  border-color: var(--blue);
+}
+
+.hd-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--red-light);
+  color: var(--red);
+}
+
+.hd-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.hd-card {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--blue);
+  border-radius: var(--radius-lg);
+  background: var(--white);
+  box-shadow: var(--shadow-card);
+}
+
+.hd-card p {
+  margin: 0;
+}
+
+.hd-card-label {
+  color: var(--gray);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.hd-card-value {
+  margin-top: 6px;
+  color: var(--navy);
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.hd-card-note {
+  margin-top: 4px;
+  color: var(--gray);
+  font-size: 0.9rem;
+}
+
+.hd-spin {
+  animation: hd-rotate 1s linear infinite;
+}
+
+@keyframes hd-rotate {
+  to { transform: rotate(360deg); }
+}
+
+/* "Resumen de la Flota" heading now sits below the shortcuts / admin box. */
+.hd + .section-heading,
+.hd-between + .section-heading {
+  margin-top: 28px;
+}
+
+/* Second row: top vehicle + fuel cost chart. */
+.hd-row2 {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+@media (max-width: 760px) {
+  .hd-row2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.hd-card-foot {
+  margin-top: 10px !important;
+  color: var(--gray);
+  font-size: 0.78rem;
+}
+
+.hd-chart {
+  position: relative;
+  margin: 8px 0 0;
+}
+
+.hd-chart svg {
+  display: block;
+  width: 100%;
+  height: 110px;
+}
+
+.hd-chart-line {
+  fill: none;
+  stroke: var(--blue);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.hd-chart-area {
+  fill: var(--blue-light);
+  stroke: none;
+}
+
+.hd-chart-max {
+  margin-bottom: 6px;
+  color: var(--gray);
+  font-size: 0.75rem;
+}
+.hd-chart-dates {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  color: var(--gray);
+  font-size: 0.75rem;
+}

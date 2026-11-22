@@ -16,6 +16,7 @@ import AuditorPanel from './auditor/AuditorPanel'
 import AddDailyLog from './addDailyLog'
 import ReportIssue from './reportIssue'
 import KeyControl from './keyControl'
+import IncidentReport from './incidentReport'
 
 const vehicleStats = [
   { label: 'Total de vehículos', value: '—', Icon: CarFront, color: 'navy' },
@@ -27,6 +28,7 @@ const quickActions = [
   { label: 'Registrar uso diario', Icon: ClipboardList, page: 'daily' },
   { label: 'Registrar combustible', Icon: Fuel, page: 'addFuel' },
   { label: 'Registrar mantenimiento', Icon: Wrench, page: 'reportIssue' },
+  { label: 'Registrar incidente', Icon: TriangleAlert, page: 'incidentReport' },
   { label: 'Ver reportes', Icon: FileText },
 ]
 const baseSidebarItems = [
@@ -147,6 +149,8 @@ export default function Homepage({ user, onSignOut }) {
             <AddDailyLog onDone={()=>navigate('home')}/>
           ): activePage==='reportIssue'?(
             <ReportIssue user={user} profile={profile} onDone={()=>navigate('home')}/>
+          ): activePage==='incidentReport'?(
+            <IncidentReport user={user} profile={profile} onDone={()=>navigate('home')}/>
           ): activePage==='keys'?(
             <KeyControl onDone={()=>navigate('home')}/>
           ): activePage=== 'vehicles'?(

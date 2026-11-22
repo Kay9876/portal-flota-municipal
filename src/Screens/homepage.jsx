@@ -71,7 +71,7 @@ export default function Homepage({ user, onSignOut }) {
   ...(isAuditor
     ? [
         {
-          label: 'Panel del Auditor',
+          label: 'Panel Analitico',
           Icon: ChartNoAxesCombined,
           page: 'auditor',
         },
@@ -86,6 +86,7 @@ export default function Homepage({ user, onSignOut }) {
       ]
     : []),
 ]
+
 
   function navigate(page) {
     if (page === 'auditor' && !isAuditor) return

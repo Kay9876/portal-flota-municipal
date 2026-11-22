@@ -15,7 +15,7 @@ import Departments from './departments'
 import AuditorPanel from './auditor/AuditorPanel'
 import AddDailyLog from './addDailyLog'
 import ReportIssue from './reportIssue'
-
+import KeyControl from './keyControl'
 
 const vehicleStats = [
   { label: 'Total de vehículos', value: '—', Icon: CarFront, color: 'navy' },
@@ -52,7 +52,7 @@ export default function Homepage({ user, onSignOut }) {
     async function loadProfile() {
       setProfileLoading(true)
       const { data, error } = await supabase.from('profiles')
-        .select('id,first_name,last_name,second_last_name,department_id,is_admin,is_global_viewer,is_active')
+        .select('id,first_name,last_name,second_last_name,department_id,is_admin,is_global_viewer,is_mechanic,is_active')
         .eq('id', user.id).maybeSingle()
       if (!alive) return
       if (error) setProfileError(error.message)
@@ -147,6 +147,8 @@ export default function Homepage({ user, onSignOut }) {
             <AddDailyLog onDone={()=>navigate('home')}/>
           ): activePage==='reportIssue'?(
             <ReportIssue user={user} profile={profile} onDone={()=>navigate('home')}/>
+          ): activePage==='keys'?(
+            <KeyControl onDone={()=>navigate('home')}/>
           ): activePage=== 'vehicles'?(
           selectedVehicleId!==null?(
             <ViewVehicleInfo 

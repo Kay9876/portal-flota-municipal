@@ -17,12 +17,12 @@ function Bars({ data, format = String, threshold = null }) {
     <strong>{format(item.value)}</strong>
   </div>)}</div>
 }
-function Pie({ data }) {
+function Pie({ data, emptyMessage = 'No hay vehículos registrados para calcular porcentajes.' }) {
   const total = data.reduce((sum, item) => sum + item.value, 0)
-  if (!total) return <p>No hay vehículos registrados para calcular porcentajes.</p>
+  if (!total) return <p>{emptyMessage}</p>
   let offset = 0
-  const stops = data.filter(d => d.value > 0).map((d, i) => { const start = offset; offset += d.value / total * 100; return `${colors[i % colors.length]} ${start}% ${offset}%` })
-  return <div className="aud-pie-layout"><div className="aud-pie" role="img" aria-label="Distribución de vehículos por departamento" style={{ background: `conic-gradient(${stops.join(', ')})` }} />
+  const stops = data.map((d, i) => ({ ...d, color: colors[i % colors.length] })).filter(d => d.value > 0).map(d => { const start = offset; offset += d.value / total * 100; return `${d.color} ${start}% ${offset}%` })
+  return <div className="aud-pie-layout"><div className="aud-pie" role="img" aria-label="Distribución porcentual" style={{ background: `conic-gradient(${stops.join(', ')})` }} />
     <ul className="aud-legend">{data.map((d, i) => <li key={d.key}><span className="aud-swatch" style={{ background: colors[i % colors.length] }} />{d.label}: {(d.value / total * 100).toFixed(1)}% ({d.value})</li>)}</ul>
   </div>
 }
@@ -87,6 +87,12 @@ export default function AuditorPanel() {
   const [maintenanceThreshold, setMaintenanceThreshold] = useState('1000')
   const [departments, setDepartments] = useState([])
   const [fuelData, setFuelData] = useState(null)
+  const [fuelDepartmentsData, setFuelDepartmentsData] = useState([])
+  const [fuelDepartmentsLoading, setFuelDepartmentsLoading] = useState(false)
+  const [fuelDepartmentsError, setFuelDepartmentsError] = useState('')
+  const [maintenanceData, setMaintenanceData] = useState(null)
+  const [maintenanceLoading, setMaintenanceLoading] = useState(false)
+  const [maintenanceError, setMaintenanceError] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -123,6 +129,65 @@ export default function AuditorPanel() {
     return () => { alive = false }
   }, [fuelStart, fuelEnd, fuelDepartment, fuelTop])
 
+  // This RPC depends ONLY on the fuel date range, not department, Top N or monetary threshold.
+  useEffect(() => {
+    let alive = true
+    const validationError = validateRange(fuelStart, fuelEnd)
+    if (validationError) {
+      setFuelDepartmentsError(validationError)
+      setFuelDepartmentsData([])
+      setFuelDepartmentsLoading(false)
+      return () => { alive = false }
+    }
+    async function loadFuelDepartments() {
+      setFuelDepartmentsLoading(true)
+      setFuelDepartmentsError('')
+      const { data, error } = await supabase.rpc('auditor_fuel_departments', {
+        p_start: fuelStart,
+        p_end: fuelEnd,
+      })
+      if (!alive) return
+      if (error) {
+        setFuelDepartmentsError(error.message)
+        setFuelDepartmentsData([])
+      } else {
+        setFuelDepartmentsData(data || [])
+      }
+      setFuelDepartmentsLoading(false)
+    }
+    loadFuelDepartments()
+    return () => { alive = false }
+  }, [fuelStart, fuelEnd])
+
+  useEffect(() => {
+    let alive = true
+    const validationError = validateRange(maintenanceStart, maintenanceEnd)
+    if (validationError) {
+      setMaintenanceError(validationError)
+      setMaintenanceData(null)
+      setMaintenanceLoading(false)
+      return () => { alive = false }
+    }
+    async function loadMaintenance() {
+      setMaintenanceLoading(true)
+      setMaintenanceError('')
+      const { data, error } = await supabase.rpc('auditor_maintenance_status', {
+        p_start: maintenanceStart,
+        p_end: maintenanceEnd,
+      })
+      if (!alive) return
+      if (error) {
+        setMaintenanceError(error.message)
+        setMaintenanceData(null)
+      } else {
+        setMaintenanceData(data || [])
+      }
+      setMaintenanceLoading(false)
+    }
+    loadMaintenance()
+    return () => { alive = false }
+  }, [maintenanceStart, maintenanceEnd])
+
   const departmentChart = departments.map(d => ({ key: d.id, label: d.name || `Departamento ${d.id}`, value: Number(d.count) || 0 }))
   const period = (fuelData?.fuel_period || []).map(d => ({ key: d.month, label: String(d.month).slice(0, 7), value: Number(d.total) || 0 }))
   const limit = Math.max(0, Number(fuelThreshold) || 0)
@@ -138,6 +203,21 @@ export default function AuditorPanel() {
         <label>Departamento<select value={fuelDepartment} onChange={e => setFuelDepartment(e.target.value)}><option value="all">Todos los departamentos</option>{departments.map(d => <option key={d.id} value={d.id}>{d.name || `Departamento ${d.id}`}</option>)}</select></label>
         <label>Vehículos<select value={fuelTop} onChange={e => setFuelTop(e.target.value)}><option value="all">Todos</option><option value="5">Top 5</option><option value="10">Top 10</option></select></label>
       </div>
+      <div className="aud-card aud-card-full">
+        <h3>Distribución de gastos de combustible por departamento</h3>
+        {fuelDepartmentsError && <div role="alert" className="admin-alert error">{fuelDepartmentsError}</div>}
+        {fuelDepartmentsLoading ? <p role="status">Cargando gastos por departamento…</p> : !fuelDepartmentsError && <>
+          <Pie
+            data={fuelDepartmentsData.map(d => ({
+              key: d.id === null ? 'sin-departamento' : String(d.id),
+              label: d.name || 'Sin departamento',
+              value: Number(d.total) || 0,
+            }))}
+            emptyMessage="No hay gastos de combustible registrados en el período seleccionado."
+          />
+          <p className="aud-note">Este gráfico utiliza exclusivamente las fechas Desde y Hasta. No cambia con el departamento seleccionado, Top N ni el límite de gasto mensual. Los gastos se atribuyen al departamento actualmente asignado al vehículo.</p>
+        </>}
+      </div>
       {loading ? <p role="status">Cargando combustible…</p> : fuelData && <>
         <div className="aud-card"><h3>Gasto mensual · período seleccionado</h3><Bars data={period} format={money} threshold={limit} /><p className="aud-note">Meses sobre el límite: {period.filter(d => d.value > limit).map(d => d.label).join(', ') || 'Ninguno'}. Top de vehículos ordenado por gasto total en el período seleccionado.</p></div>
         <div className="aud-card aud-card-full"><h3>Desviación estándar · últimos 12 meses</h3><p>Promedio mensual (μ): <strong>{money(fuelData.fuel_mean)}</strong> · Desviación estándar (σ): <strong>{money(Math.sqrt(Math.max(0, Number(fuelData.fuel_variance) || 0)))}</strong></p>
@@ -145,6 +225,11 @@ export default function AuditorPanel() {
       </>}
     </div></details>
     <details className="aud-section"><summary>3. Registro de llaves</summary><div className="aud-section-body"><div className="aud-controls aud-controls-wide"><DateControls start={keyStart} end={keyEnd} onStart={setKeyStart} onEnd={setKeyEnd} /></div><div className="aud-placeholder">{validateRange(keyStart, keyEnd) || 'Próximamente. No hay gráficos implementados todavía.'}</div></div></details>
-    <details className="aud-section"><summary>4. Mantenimiento</summary><div className="aud-section-body"><div className="aud-controls aud-controls-wide"><DateControls start={maintenanceStart} end={maintenanceEnd} onStart={setMaintenanceStart} onEnd={setMaintenanceEnd} /><label>Límite de gasto mensual (USD)<input type="number" min="0" step="0.01" value={maintenanceThreshold} onChange={e => setMaintenanceThreshold(e.target.value)} /></label></div><div className="aud-placeholder">{validateRange(maintenanceStart, maintenanceEnd) || 'Próximamente. No hay gráficos implementados todavía.'}</div></div></details>
+    <details className="aud-section"><summary>4. Mantenimiento</summary><div className="aud-section-body"><div className="aud-controls aud-controls-wide"><DateControls start={maintenanceStart} end={maintenanceEnd} onStart={setMaintenanceStart} onEnd={setMaintenanceEnd} /><label>Límite de gasto mensual (USD)<input type="number" min="0" step="0.01" value={maintenanceThreshold} onChange={e => setMaintenanceThreshold(e.target.value)} /></label></div>{maintenanceError && <div role="alert" className="admin-alert error">{maintenanceError}</div>}
+      {maintenanceLoading ? <p role="status">Cargando mantenimiento…</p> : !maintenanceError && <div className="aud-card aud-card-full">
+        <h3>Estado de solicitudes de mantenimiento</h3>
+        <Pie data={(maintenanceData || []).map(d => ({ key: d.status, label: d.label, value: Number(d.count) || 0 }))} emptyMessage="No hay solicitudes de mantenimiento en el período seleccionado." />
+        <p className="aud-note">Se cuentan solicitudes creadas entre las fechas seleccionadas según su estado actual. «Cerrada» incluye solicitudes completadas y canceladas. El límite de gasto mensual no afecta este gráfico.</p>
+      </div>}</div></details>
   </div>
 }

@@ -48,7 +48,7 @@ export default function ReportIssue({user=null,profile=null,onDone}){
         }
         setStatus({type:'saving',text:'Enviando reporte...'})
 
-        const {data,error}=await supabase.functions.invoke('request_mainteance',{
+        const {data,error}=await supabase.functions.invoke('request-maintenance',{
             body: buildIssueFormData(form,mode,photo)
         })
 

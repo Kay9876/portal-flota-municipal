@@ -1,4 +1,9 @@
 import { useEffect, useState } from 'react'
+import {
+  ResponsiveContainer, BarChart, Bar, PieChart, Pie as RechartsPie,
+  Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  ReferenceLine, ReferenceArea,
+} from 'recharts'
 import { supabase } from '../../supabaseClient'
 import './AuditorPanel.css'
 
@@ -11,59 +16,74 @@ const colors = ['#24658c', '#42a5a0', '#e2a65a', '#7e72ac', '#ca7776', '#83a85e'
 function Bars({ data, format = String, threshold = null }) {
   if (!data.length) return <p>No hay datos para mostrar.</p>
   const max = Math.max(1, ...data.map(d => Number(d.value)), threshold ?? 0)
-  return <div className="aud-bars">{data.map((item, i) => <div className="aud-bar-row" key={item.key}>
-    <span title={item.label}>{item.label}</span>
-    <div className="aud-track"><div className="aud-fill" style={{ width: `${Math.max(0, Number(item.value)) / max * 100}%`, background: threshold !== null && item.value > threshold ? '#c15b48' : colors[i % colors.length] }} /></div>
-    <strong>{format(item.value)}</strong>
-  </div>)}</div>
-}
-function Pie({ data, emptyMessage = 'No hay vehículos registrados para calcular porcentajes.' }) {
-  const total = data.reduce((sum, item) => sum + item.value, 0)
-  if (!total) return <p>{emptyMessage}</p>
-  let offset = 0
-  const stops = data.map((d, i) => ({ ...d, color: colors[i % colors.length] })).filter(d => d.value > 0).map(d => { const start = offset; offset += d.value / total * 100; return `${d.color} ${start}% ${offset}%` })
-  return <div className="aud-pie-layout"><div className="aud-pie" role="img" aria-label="Distribución porcentual" style={{ background: `conic-gradient(${stops.join(', ')})` }} />
-    <ul className="aud-legend">{data.map((d, i) => <li key={d.key}><span className="aud-swatch" style={{ background: colors[i % colors.length] }} />{d.label}: {(d.value / total * 100).toFixed(1)}% ({d.value})</li>)}</ul>
+  return <div className="aud-rechart" style={{ height: Math.max(240, data.length * 38 + 65) }}>
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={data} layout="vertical" margin={{ top: 15, right: 24, bottom: 12, left: 5 }}>
+        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+        <XAxis type="number" domain={[0, max]} tickFormatter={format} tick={{ fontSize: 11 }} />
+        <YAxis type="category" dataKey="label" width={75} tick={{ fontSize: 12 }} interval={0} />
+        <Tooltip formatter={value => [format(value), 'Gasto']} />
+        {threshold !== null && <ReferenceLine x={threshold} stroke="#c15b48" strokeDasharray="5 4" />}
+        <Bar dataKey="value" name="Gasto" radius={[0, 4, 4, 0]} maxBarSize={24}>
+          {data.map((item, i) => <Cell key={item.key} fill={threshold !== null && item.value > threshold ? '#c15b48' : colors[i % colors.length]} />)}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
   </div>
 }
 
-// Normal-distribution reference curve based on the observed monthly mean and SD.
-// This is an illustrative model; monthly spending is not assumed to be normally distributed.
+function Pie({ data, format = String, emptyMessage = 'No hay vehículos registrados para calcular porcentajes.' }) {
+  // Assign colors before filtering so zero-value categories cannot shift colors.
+  const coloredData = data.map((d, i) => ({ ...d, color: colors[i % colors.length] }))
+  const total = coloredData.reduce((sum, d) => sum + d.value, 0)
+  if (!total) return <p>{emptyMessage}</p>
+  const visible = coloredData.filter(d => d.value > 0)
+  return <div className="aud-pie-layout">
+    <div className="aud-rechart-pie">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <RechartsPie data={visible} dataKey="value" nameKey="label" cx="50%" cy="50%" outerRadius="88%" startAngle={90} endAngle={-270}>
+            {visible.map(d => <Cell key={d.key} fill={d.color} />)}
+          </RechartsPie>
+          <Tooltip formatter={(value, name) => [`${format(value)} (${(Number(value) / total * 100).toFixed(1)}%)`, name]} />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+    <ul className="aud-legend">{coloredData.map(d => <li key={d.key}>
+      <span className="aud-swatch" style={{ background: d.color }} />
+      {d.label}: {(d.value / total * 100).toFixed(1)}% ({format(d.value)})
+    </li>)}</ul>
+  </div>
+}
+
+// Illustrative normal model, not an empirical distribution of monthly spending.
 function StandardDeviationCurve({ mean, variance }) {
   const mu = Number(mean) || 0
   const sd = Math.sqrt(Math.max(0, Number(variance) || 0))
   if (sd === 0) return <p className="aud-note">La desviación estándar es 0: los 12 meses tienen el mismo gasto y no se puede representar una campana con dispersión.</p>
-  const left = 64, right = 856, top = 42, baseline = 320
-  const center = (left + right) / 2
-  const unit = (right - left) / 8 // show -4σ to +4σ
-  const x = z => center + z * unit
-  const y = z => baseline - Math.exp(-0.5 * z * z) * 235
-  const curve = Array.from({ length: 161 }, (_, i) => {
-    const z = -4 + i * 0.05
-    return `${i === 0 ? 'M' : 'L'} ${x(z).toFixed(2)} ${y(z).toFixed(2)}`
-  }).join(' ')
-  const bands = [
-    { n: 3, label: '99.7%', height: 292, color: '#a78bfa' },
-    { n: 2, label: '95%', height: 250, color: '#a78bfa' },
-    { n: 1, label: '68%', height: 196, color: '#a78bfa' },
-  ]
+  const data = Array.from({ length: 161 }, (_, i) => {
+    const z = (i - 80) / 20
+    return { z, density: Math.exp(-0.5 * z * z) / Math.sqrt(2 * Math.PI) }
+  })
+  const ticks = [-3, -2, -1, 0, 1, 2, 3]
   return <div className="aud-normal-wrap">
-    <svg className="aud-normal-curve" viewBox="0 0 920 385" role="img" aria-label={`Curva normal ilustrativa. Promedio ${money(mu)}; desviación estándar ${money(sd)}; intervalos a una, dos y tres desviaciones estándar.`}>
-      <line x1={left} y1={baseline} x2={right} y2={baseline} stroke="#23365f" strokeWidth="3" />
-      {[-3,-2,-1,0,1,2,3].map(n => <g key={n}>
-        <line x1={x(n)} y1={baseline} x2={x(n)} y2={y(n)} stroke={n === 0 ? '#19b8aa' : '#57c8ce'} strokeWidth="1.6" strokeDasharray={n === 0 ? undefined : '7 6'} />
-        <line x1={x(n)} y1={baseline} x2={x(n)} y2={baseline+8} stroke="#23365f" strokeWidth="2" />
-        <text x={x(n)} y={baseline+27} textAnchor="middle" fontSize="14" fill="#243c65">{n === 0 ? 'μ' : `${n > 0 ? '+' : '−'}${Math.abs(n)}σ`}</text>
-        <text x={x(n)} y={baseline+46} textAnchor="middle" fontSize="11" fill="#536780">{money(mu+n*sd)}</text>
-      </g>)}
-      {bands.map(({n,label,height,color}) => <g key={n}>
-        <line x1={x(-n)} y1={height} x2={x(n)} y2={height} stroke={color} strokeWidth="2" />
-        <path d={`M ${x(-n)+7} ${height-4} L ${x(-n)} ${height} L ${x(-n)+7} ${height+4} M ${x(n)-7} ${height-4} L ${x(n)} ${height} L ${x(n)-7} ${height+4}`} fill="none" stroke={color} strokeWidth="2" />
-        <rect x={center-31} y={height-23} width="62" height="21" rx="5" fill="white" />
-        <text x={center} y={height-8} textAnchor="middle" fontSize="16" fontWeight="700" fill="#243c65">{label}</text>
-      </g>)}
-      <path d={curve} fill="none" stroke="#2485eb" strokeWidth="4" strokeLinecap="round" />
-    </svg>
+    <div className="aud-rechart-normal">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data} margin={{ top: 30, right: 35, bottom: 25, left: 35 }}>
+          <XAxis type="number" dataKey="z" domain={[-4, 4]} ticks={ticks} tickFormatter={z => money(mu + z * sd)} tick={{ fontSize: 11 }} interval={0} />
+          <YAxis domain={[0, 0.46]} hide />
+          <ReferenceArea x1={-3} x2={3} fill="#e2a65a" fillOpacity={0.12} />
+          <ReferenceArea x1={-2} x2={2} fill="#42a5a0" fillOpacity={0.15} />
+          <ReferenceArea x1={-1} x2={1} fill="#24658c" fillOpacity={0.18} />
+          {ticks.map(z => <ReferenceLine key={z} x={z} stroke="#57aeb8" strokeDasharray={z === 0 ? undefined : '5 5'} label={{ value: z === 0 ? 'μ' : `${z > 0 ? '+' : '−'}${Math.abs(z)}σ`, position: 'top', fontSize: 12 }} />)}
+          <Tooltip labelFormatter={z => `Gasto: ${money(mu + Number(z) * sd)}`} formatter={value => [Number(value).toFixed(4), 'Densidad normal estándar']} />
+          <Line type="monotone" dataKey="density" stroke="#2485eb" strokeWidth={3} dot={false} isAnimationActive={false} />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+    <ul className="aud-legend aud-normal-intervals">
+      {[1, 2, 3].map((n, i) => <li key={n}>μ ± {n}σ: {money(mu - n * sd)} – {money(mu + n * sd)} ({['68%', '95%', '99.7%'][i]})</li>)}
+    </ul>
     <p className="aud-note">Curva normal de referencia construida con el promedio y la desviación estándar de los gastos mensuales. Los porcentajes 68%, 95% y 99.7% son teóricos si los datos siguen una distribución normal; no son porcentajes observados de los registros.</p>
   </div>
 }
@@ -213,6 +233,7 @@ export default function AuditorPanel() {
               label: d.name || 'Sin departamento',
               value: Number(d.total) || 0,
             }))}
+            format={money}
             emptyMessage="No hay gastos de combustible registrados en el período seleccionado."
           />
           <p className="aud-note">Este gráfico utiliza exclusivamente las fechas Desde y Hasta. No cambia con el departamento seleccionado, Top N ni el límite de gasto mensual. Los gastos se atribuyen al departamento actualmente asignado al vehículo.</p>

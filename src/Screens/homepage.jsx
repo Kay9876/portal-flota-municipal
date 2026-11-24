@@ -1,8 +1,9 @@
 // Dashboard principal. La autorización real de cada operación se aplica también en Supabase.
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
-  CarFront, Car, TriangleAlert, Wrench, ClipboardList, Fuel, FileText, House,
+  CarFront, TriangleAlert, Wrench, ClipboardList, Fuel, House,
   Building2, CalendarDays, KeyRound, ChartNoAxesCombined, Users, Settings, LogOut,
+  AlertCircle, Loader2, 
 } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import escudoVA from 'url:../assets/escudoVA.png'
@@ -17,20 +18,306 @@ import AddDailyLog from './addDailyLog'
 import ReportIssue from './reportIssue'
 import KeyControl from './keyControl'
 import IncidentReport from './incidentReport'
+import { getDepartmentOptions } from '../utils/vehicleList'
+import {
+  filterByDepartment,
+  countFleet,
+  countInWorkshop,
+  countKeysOut,
+  countKeysNotReturnedYesterday,
+  lastDaysRange,
+  topVehicleByDepartures,
+  fuelCostByDay,
+  keysOutList,
+  incidentsForDepartment,
+  recentIncidents,
+  formatWhen, 
+} from '../utils/dashboardHelper'
+import './homepage.css'
 
-const vehicleStats = [
-  { label: 'Total de vehículos', value: '—', Icon: CarFront, color: 'navy' },
-  { label: 'En uso', value: '—', Icon: Car, color: 'green' },
-  { label: 'Fuera de servicio', value: '—', Icon: TriangleAlert, color: 'red' },
-  { label: 'En mantenimiento', value: '—', Icon: Wrench, color: 'navy' },
-]
+// const vehicleStats = [
+//   { label: 'Total de vehículos', value: '—', Icon: CarFront, color: 'navy' },
+//   { label: 'En uso', value: '—', Icon: Car, color: 'green' },
+//   { label: 'Fuera de servicio', value: '—', Icon: TriangleAlert, color: 'red' },
+//   { label: 'En mantenimiento', value: '—', Icon: Wrench, color: 'navy' },
+// ]
+
 const quickActions = [
   { label: 'Registrar uso diario', Icon: ClipboardList, page: 'daily' },
   { label: 'Registrar combustible', Icon: Fuel, page: 'addFuel' },
   { label: 'Registrar mantenimiento', Icon: Wrench, page: 'reportIssue' },
   { label: 'Registrar incidente', Icon: TriangleAlert, page: 'incidentReport' },
-  { label: 'Ver reportes', Icon: FileText },
+  { label: 'Entregar ó Recibir Llaves', Icon: KeyRound, page: 'keys'}
 ]
+const W = 600
+const H = 140 
+const PAD = 6 
+
+const money = (n) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
+
+function shortDate(date) {
+  return new Date(date + 'T12:00:00').toLocaleDateString('es-PR', { day: 'numeric', month: 'short' })
+}
+
+function FuelCostChart({ points }) {
+  const max = Math.max(...points.map((p) => p.total), 0)
+  const step = points.length > 1 ? (W - PAD * 2) / (points.length - 1) : 0
+  const coords = points.map((p, i) => {
+    const x = PAD + i * step
+    const y = max === 0 ? H - PAD : PAD + (1 - p.total / max) * (H - PAD * 2)
+    return [x, y]
+  })
+  const line = coords.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ')
+  const area = `${PAD},${H - PAD} ${line} ${(PAD + (points.length - 1) * step).toFixed(1)},${H - PAD}`
+
+  return (
+    <figure className="hd-chart">
+      <div className="hd-chart-max">{money(max)}</div>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="none"
+        role="img"
+        aria-label={`Costo diario de combustible, de ${shortDate(points[0].date)} a ${shortDate(points[points.length - 1].date)}`}
+      >
+        <polygon points={area} className="hd-chart-area" />
+        <polyline points={line} className="hd-chart-line" vectorEffect="non-scaling-stroke" />
+      </svg>
+      <div className="hd-chart-dates">
+        <span>{shortDate(points[0].date)}</span>
+        <span>{shortDate(points[points.length - 1].date)}</span>
+      </div>
+    </figure>
+  )
+}
+
+// Supabase returns at most 1000 rows per request, so bigger tables are read in pages.
+// Without this, totals would silently miss rows. Returns { data, error } like a normal query.
+const PAGE_SIZE = 1000
+async function fetchAll(makeQuery) {
+  const rows = []
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await makeQuery().order('id').range(from, from + PAGE_SIZE - 1)
+    if (error) return { data: null, error }
+    rows.push(...data)
+    if (data.length < PAGE_SIZE) return { data: rows, error: null }
+  }
+}
+
+function plural(n, one, many) {
+  return n === 1 ? one : many
+}
+
+
+
+// Shortcuts block ("Accesos rápidos").
+function HomeShortcuts({ onNavigate }) {
+  return (
+    <div className="hd">
+      <h2 className="hd-heading hd-heading-first">Accesos rápidos</h2>
+      <div className="hd-shortcuts">
+        {quickActions.map(({ label, description, Icon, page }) => (
+          <button
+            key={label}
+            type="button"
+            className={'hd-shortcut' + (page ? '' : ' hd-shortcut-soon')}
+            disabled={!page}
+            onClick={() => page && onNavigate(page)}
+          >
+            <span className="hd-shortcut-icon"><Icon size={24} strokeWidth={2} aria-hidden="true" /></span>
+            <span className="hd-shortcut-label">{label}</span>
+            {description && <span className="hd-shortcut-desc">{description}</span>}
+            {!page && <span className="hd-soon">Próximamente</span>}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// "Hoy en la flota" block: department dropdown + the three cards.
+function HomeFleetToday() {
+  const [vehicles, setVehicles] = useState([])
+  const [keyRows, setKeyRows] = useState([])
+  const [dailyRows, setDailyRows] = useState([])
+  const [fuelRows, setFuelRows] = useState([])
+  const [incidentRows, setIncidentRows] = useState([])
+  // Both new widgets look at the last 30 days (the extended dashboard will have its own filters).
+  const [range] = useState(() => lastDaysRange(30))
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [departmentId, setDepartmentId] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function load() {
+      setLoading(true)
+      setError('')
+      // Row level security limits both queries to the departments the user can view.
+      const [veh, keys, daily, fuel, incidents] = await Promise.all([
+        supabase
+          .from('vehicles')
+          .select('id, department_id, is_active, manufacturer, model, license_plate, departments(name)'),
+        supabase
+          .from('key_register')
+          .select('vehicle_id, kr_date, key_pickup, key_handover', 'driver_name')
+          .not('key_pickup', 'is', null)
+          .is('key_handover', null),
+        // Every row of daily_register is one trip ("salida").
+        fetchAll(() => supabase
+          .from('daily_register')
+          .select('vehicle_id, departure_date')
+          .gte('departure_date', range.start)
+          .lte('departure_date', range.end)),
+        fetchAll(() => supabase
+          .from('fuel_register')
+          .select('vehicle_id, dispatch_date, amount_dispatched')
+          .gte('dispatch_date', range.start)
+          .lte('dispatch_date', range.end)),
+
+        fetchAll(() => supabase
+        .from('incident_reports')
+        .select('id, created_at, plate, description, reporter_department_id')
+        .gte('created_at', range.start + 'T00:00:00-04:00'))
+      ])
+        
+      if (cancelled) return
+      const message = veh.error?.message || keys.error?.message || daily.error?.message || fuel.error?.message || incidents.error?.message
+      if (message) setError('No se pudo cargar el resumen de la flota: ' + message)
+      setVehicles(veh.data || [])
+      setKeyRows(keys.data || [])
+      setDailyRows(daily.data || [])
+      setFuelRows(fuel.data || [])
+      setIncidentRows(incidents.data || [])
+      setLoading(false)
+    }
+
+    load()
+    return () => { cancelled = true }
+  }, [range])
+
+  const departmentOptions = useMemo(() => getDepartmentOptions(vehicles), [vehicles])
+  const scoped = useMemo(() => filterByDepartment(vehicles, departmentId), [vehicles, departmentId])
+  const fleet = useMemo(() => countFleet(scoped), [scoped])
+  const inWorkshop = useMemo(() => countInWorkshop(scoped), [scoped])
+  const keysOut = useMemo(() => countKeysOut(scoped, keyRows), [scoped, keyRows])
+  const notReturned = useMemo(() => countKeysNotReturnedYesterday(scoped, keyRows), [scoped, keyRows])
+
+  const topVehicle = useMemo(() => topVehicleByDepartures(scoped, dailyRows, range), [scoped, dailyRows, range])
+  const fuel = useMemo(() => fuelCostByDay(scoped, fuelRows, range), [scoped, fuelRows, range])
+  const outList =  useMemo(() => keysOutList(scoped, keyRows), [scoped, keyRows])
+  const incidents = useMemo(() => recentIncidents(incidentsForDepartment(incidentRows, departmentId), range),
+    [incidentRows, departmentId, range],)
+
+  const dash = '—'
+
+  return (
+    <div className="hd">
+      <div className="hd-title-row">
+        <h2 className="hd-heading">Hoy en la flota</h2>
+        <div className="hd-field">
+          <label htmlFor="hd-department">Departamento</label>
+          <select id="hd-department" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
+            <option value="">Todos</option>
+            {departmentOptions.map(([id, name]) => (
+              <option key={id} value={id}>{name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {error && (
+        <div className="hd-alert" role="alert">
+          <AlertCircle size={16} aria-hidden="true" /> {error}
+        </div>
+      )}
+
+      <div className="hd-cards" aria-busy={loading}>
+        <article className="hd-card">
+          <p className="hd-card-label">Vehículos disponibles</p>
+          <p className="hd-card-value">
+            {loading ? <Loader2 size={26} className="hd-spin" aria-label="Cargando" /> : `${fleet.active} de ${fleet.total}`}
+          </p>
+          <p className="hd-card-note">{loading ? dash : plural(fleet.active, 'disponible', 'disponibles')}</p>
+        </article>
+
+        <article className="hd-card">
+          <p className="hd-card-label">Vehículos fuera ahora</p>
+          <p className="hd-card-value">{loading ? dash : keysOut}</p>
+          <p className="hd-card-note">
+            {loading ? dash : `${notReturned} ${plural(notReturned, 'llave no se devolvió', 'llaves no se devolvieron')} ayer`}
+          </p>
+          {!loading && outList.length > 0 && (
+            <ul className="hd-list">
+              {outList.map(({ vehicle, driver_name, key_pickup }) => (
+                <li key={vehicle.id}>
+                  <strong>{vehicle.license_plate || 'Sin tablilla'}</strong>
+                  <span>{[driver_name, 'desde ' + formatWhen(key_pickup)].filter(Boolean).join(' · ')}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
+
+        <article className="hd-card">
+          <p className="hd-card-label">En el taller</p>
+          <p className="hd-card-value">{loading ? dash : inWorkshop}</p>
+          <p className="hd-card-note">{loading ? dash : plural(inWorkshop, 'vehículo', 'vehículos')}</p>
+        </article>
+      </div>
+
+      <div className="hd-row2">
+        <article className="hd-card">
+          <p className="hd-card-label">Vehículo con más salidas</p>
+          <p className="hd-card-value">{loading ? dash : topVehicle ? topVehicle.vehicle.license_plate || 'Sin tablilla' : dash}</p>
+          <p className="hd-card-note">
+            {loading
+              ? dash
+              : topVehicle
+                ? `${[topVehicle.vehicle.manufacturer, topVehicle.vehicle.model].filter(Boolean).join(' ')} · ${topVehicle.count} ${plural(topVehicle.count, 'salida', 'salidas')}`
+                : 'Sin salidas en los últimos 30 días'}
+          </p>
+          <p className="hd-card-foot">Últimos 30 días</p>
+        </article>
+
+        <article className="hd-card">
+          <p className="hd-card-label">Costo de combustible</p>
+          <p className="hd-card-value">{loading ? dash : money(fuel.total)}</p>
+          {loading ? (
+            <p className="hd-card-note">{dash}</p>
+          ) : fuel.total > 0 ? (
+            <FuelCostChart points={fuel.points} />
+          ) : (
+            <p className="hd-card-note">Sin registros de combustible en los últimos 30 días</p>
+          )}
+          <p className="hd-card-foot">Últimos 30 días</p>
+        </article>
+      </div>
+             <div className="hd-cards" style={{ marginTop: 16 }}>
+        <article className="hd-card">
+          <p className="hd-card-label">Incidentes</p>
+          <p className="hd-card-value">{loading ? dash : incidents.count}</p>
+          <p className="hd-card-note">
+            {loading ? dash : `${plural(incidents.count, 'incidente reportado', 'incidentes reportados')} en los últimos 30 días`}
+          </p>
+          {!loading && incidents.latest.length > 0 && (
+            <ul className="hd-list hd-list-full">
+              {incidents.latest.map((i) => (
+                <li key={i.id}>
+                  <strong>{i.plate}</strong>
+                  <span className="hd-list-text">{i.description}</span>
+                  <small>{formatWhen(i.created_at)}</small>
+                </li>
+              ))}
+            </ul>
+          )}
+          {departmentId && <p className="hd-card-foot">Incidentes reportados por el departamento seleccionado</p>}
+        </article>
+      </div>
+    </div>
+  )
+}
+
 const baseSidebarItems = [
   { label: 'Inicio', Icon: House, page: 'home' },
   { label: 'Vehículos', Icon: CarFront, page: 'vehicles' },
@@ -135,13 +422,10 @@ export default function Homepage({ user, onSignOut }) {
             <AddVehicle onDone={() => setShowAddVehicle(false)} />
           ) : activePage === 'home' ? (
             <>
+              <HomeShortcuts onNavigate={navigate} />
+              {isAdmin && <div className="hd-between"><div className="admin-shortcut"><div><strong>Administración del sistema</strong><p>Gestiona cuentas y permisos de acceso.</p></div><button className="admin-button primary" type="button" onClick={() => navigate('users')}><Users size={17} /> Gestionar usuarios</button></div></div>}
               <div className="section-heading"><div><h1>Resumen de la Flota</h1><p className="admin-subtitle">Bienvenido/a, {displayName}</p></div><span>{new Date().toLocaleDateString('es-PR', { year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
-              <div className="stats">{vehicleStats.map(({ label, value, Icon, color }) => <article className={`stat ${color}`} key={label}><span className="stat-icon"><Icon size={28} strokeWidth={2} /></span><div><p className="label">{label}</p><p className="value">{value}</p></div></article>)}</div>
-              <div className="overview-grid"><article className="card"><h2>Vehículos por departamento</h2><p>El desglose aparecerá cuando se conecte el resumen de datos de la flota.</p></article><article className="card"><h2>Gastos mensuales</h2><p>El resumen de gastos aparecerá cuando se conecten los registros de combustible y mantenimiento.</p></article></div>
-              <h2 className="actions-heading">Accesos rápidos</h2>
-              <div className="actions-grid">{quickActions.map(({ label, Icon,page }) => <button className="action-card" key={label} type="button" onClick={() => page ? navigate(page):setProfileError(`La sección “${label}” aún no está implementada.`)}><span className="action-icon"><Icon size={26} strokeWidth={2} /></span>{label}</button>)}</div>
-              <button type="button" className="btn-primary" onClick={() => setShowAddVehicle(true)}>Agregar vehículo</button>
-              {isAdmin && <div className="admin-shortcut"><div><strong>Administración del sistema</strong><p>Gestiona cuentas y permisos de acceso.</p></div><button className="admin-button primary" type="button" onClick={() => navigate('users')}><Users size={17} /> Gestionar usuarios</button></div>}
+              <HomeFleetToday />
             </>
           ) : activePage === 'addFuel' ? (
             <AddFuel onDone={()=>navigate('home')}/>

@@ -21,7 +21,7 @@ export function countInWorkshop(vehicles) {
 
 // Key records that were picked up and never handed back.
 function isKeyOut(k) {
-    return k.key_pickup != null && k.key_handover == null
+    return k.key_pickup != null && (k.key_handover == null || k.return_unknown === true)
 }
 
 // Vehicles whose key is out right now. A record that was never returned still counts,
@@ -92,21 +92,6 @@ export function topVehicleByDepartures(vehicles, dailyRows, range) {
     return best
 }
 
-// Fuel cost (amount_dispatched) per day for every day of the range, zeros included,
-// so the line chart has one point per day. Returns { points: [{ date, total }], total }.
-export function fuelCostByDay(vehicles, fuelRows, range) {
-    const ids = new Set(vehicles.map((v) => v.id))
-    const perDay = new Map()
-    for (let d = range.start; d <= range.end; d = addDays(d, 1)) perDay.set(d, 0)
-    fuelRows.forEach((r) => {
-        if (ids.has(r.vehicle_id) && perDay.has(r.dispatch_date)) {
-            perDay.set(r.dispatch_date, perDay.get(r.dispatch_date) + (Number(r.amount_dispatched) || 0))
-        }
-    })
-    const points = [...perDay].map(([date, total]) => ({ date, total }))
-    return { points, total: points.reduce((sum, p) => sum + p.total, 0) }
-
-}
 
 export function dateInPuertoRico(timestamp) {
     return new Date(timestamp).toLocaleDateString('en-CA', { timeZone: 'America/Puerto_Rico' })
@@ -146,4 +131,18 @@ export function formatWhen(timestamp) {
     return new Date(timestamp).toLocaleString('es-PR', {
         timeZone: 'America/Puerto_Rico', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit',
     })
+}
+
+
+// Builds the chart points from the rows of fuel_cost_by_day: { day, department_id, total }.
+// One point per day of the range, zeros included. departmentId '' means all departments.
+export function fuelCostFromDaily(dailyTotals, departmentId, range) {
+    const perDay = new Map()
+    for (let d = range.start; d <= range.end; d = addDays(d, 1)) perDay.set(d, 0)
+    dailyTotals.forEach((r) => {
+        if (departmentId && String(r.department_id) !== String(departmentId)) return
+        if (perDay.has(r.day)) perDay.set(r.day, perDay.get(r.day) + (Number(r.total) || 0))
+    })
+    const points = [...perDay].map(([date, total]) => ({ date, total }))
+    return { points, total: points.reduce((sum, p) => sum + p.total, 0) }
 }

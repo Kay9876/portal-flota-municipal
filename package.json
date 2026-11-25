@@ -23,7 +23,8 @@
     "@supabase/supabase-js": "^2.117.3",
     "lucide-react": "^1.59.0",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "recharts": "^3.11.1"
   },
   "devDependencies": {
     "@parcel/source-map": "^2.1.1",

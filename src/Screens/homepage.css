@@ -219,43 +219,10 @@
 }
 
 .hd-chart {
-  position: relative;
   margin: 8px 0 0;
 }
 
-.hd-chart svg {
-  display: block;
-  width: 100%;
-  height: 110px;
-}
 
-.hd-chart-line {
-  fill: none;
-  stroke: var(--blue);
-  stroke-width: 2;
-  stroke-linejoin: round;
-}
-
-.hd-chart-area {
-  fill: var(--blue-light);
-  stroke: none;
-}
-
-.hd-chart-max {
-  position: absolute;
-  top: 0;
-  left: 0;
-  color: var(--gray);
-  font-size: 0.75rem;
-}
-
-.hd-chart-dates {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 4px;
-  color: var(--gray);
-  font-size: 0.75rem;
-}
 
 /* Lists inside cards: vehicles that are out, latest incidents. */
 .hd-list {

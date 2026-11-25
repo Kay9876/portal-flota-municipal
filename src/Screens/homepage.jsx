@@ -6,6 +6,7 @@ import {
   AlertCircle, Loader2, 
 } from 'lucide-react'
 import { supabase } from '../supabaseClient'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import escudoVA from 'url:../assets/escudoVA.png'
 import AddVehicle from './addVehicle'
 import AdminUsers from './adminIT/AdminUsers'
@@ -27,11 +28,11 @@ import {
   countKeysNotReturnedYesterday,
   lastDaysRange,
   topVehicleByDepartures,
-  fuelCostByDay,
   keysOutList,
   incidentsForDepartment,
   recentIncidents,
   formatWhen, 
+  fuelCostFromDaily,
 } from '../utils/dashboardHelper'
 import './homepage.css'
 
@@ -49,9 +50,7 @@ const quickActions = [
   { label: 'Registrar incidente', Icon: TriangleAlert, page: 'incidentReport' },
   { label: 'Entregar ó Recibir Llaves', Icon: KeyRound, page: 'keys'}
 ]
-const W = 600
-const H = 140 
-const PAD = 6 
+
 
 const money = (n) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 
@@ -60,33 +59,17 @@ function shortDate(date) {
 }
 
 function FuelCostChart({ points }) {
-  const max = Math.max(...points.map((p) => p.total), 0)
-  const step = points.length > 1 ? (W - PAD * 2) / (points.length - 1) : 0
-  const coords = points.map((p, i) => {
-    const x = PAD + i * step
-    const y = max === 0 ? H - PAD : PAD + (1 - p.total / max) * (H - PAD * 2)
-    return [x, y]
-  })
-  const line = coords.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ')
-  const area = `${PAD},${H - PAD} ${line} ${(PAD + (points.length - 1) * step).toFixed(1)},${H - PAD}`
-
-  return (
-    <figure className="hd-chart">
-      <div className="hd-chart-max">{money(max)}</div>
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        preserveAspectRatio="none"
-        role="img"
-        aria-label={`Costo diario de combustible, de ${shortDate(points[0].date)} a ${shortDate(points[points.length - 1].date)}`}
-      >
-        <polygon points={area} className="hd-chart-area" />
-        <polyline points={line} className="hd-chart-line" vectorEffect="non-scaling-stroke" />
-      </svg>
-      <div className="hd-chart-dates">
-        <span>{shortDate(points[0].date)}</span>
-        <span>{shortDate(points[points.length - 1].date)}</span>
-      </div>
-    </figure>
+ return (
+    <div className="hd-chart" role="img" aria-label={`Costo diario de combustible, de ${shortDate(points[0].date)} a ${shortDate(points[points.length - 1].date)}`}>
+      <ResponsiveContainer width="100%" height={150}>
+        <AreaChart data={points} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+          <XAxis dataKey="date" tickFormatter={shortDate} interval="preserveStartEnd" tick={{ fontSize: 12, fill: '#667085' }} tickLine={false} axisLine={false} />
+          <YAxis width={56} tickFormatter={(v) => '$' + v.toLocaleString('en-US')} tick={{ fontSize: 12, fill: '#667085' }} tickLine={false} axisLine={false} />
+          <Tooltip labelFormatter={shortDate} formatter={(value) => [money(value), 'Combustible']} />
+          <Area type="monotone" dataKey="total" stroke="#1d5fa8" strokeWidth={2} fill="#e8f1fb" />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
   )
 }
 
@@ -159,21 +142,18 @@ function HomeFleetToday() {
           .from('vehicles')
           .select('id, department_id, is_active, manufacturer, model, license_plate, departments(name)'),
         supabase
-          .from('key_register')
-          .select('vehicle_id, kr_date, key_pickup, key_handover', 'driver_name')
+         .from('key_register')
+          .select('vehicle_id, kr_date, key_pickup, key_handover, return_unknown, driver_name')
           .not('key_pickup', 'is', null)
-          .is('key_handover', null),
+          .or('key_handover.is.null,return_unknown.eq.true'),
         // Every row of daily_register is one trip ("salida").
         fetchAll(() => supabase
           .from('daily_register')
           .select('vehicle_id, departure_date')
           .gte('departure_date', range.start)
           .lte('departure_date', range.end)),
-        fetchAll(() => supabase
-          .from('fuel_register')
-          .select('vehicle_id, dispatch_date, amount_dispatched')
-          .gte('dispatch_date', range.start)
-          .lte('dispatch_date', range.end)),
+        
+        supabase.rpc('fuel_cost_by_day', { p_start: range.start, p_end: range.end }),
 
         fetchAll(() => supabase
         .from('incident_reports')
@@ -204,7 +184,7 @@ function HomeFleetToday() {
   const notReturned = useMemo(() => countKeysNotReturnedYesterday(scoped, keyRows), [scoped, keyRows])
 
   const topVehicle = useMemo(() => topVehicleByDepartures(scoped, dailyRows, range), [scoped, dailyRows, range])
-  const fuel = useMemo(() => fuelCostByDay(scoped, fuelRows, range), [scoped, fuelRows, range])
+  const fuel = useMemo(() => fuelCostFromDaily(fuelRows, departmentId, range), [fuelRows, departmentId, range])
   const outList =  useMemo(() => keysOutList(scoped, keyRows), [scoped, keyRows])
   const incidents = useMemo(() => recentIncidents(incidentsForDepartment(incidentRows, departmentId), range),
     [incidentRows, departmentId, range],)

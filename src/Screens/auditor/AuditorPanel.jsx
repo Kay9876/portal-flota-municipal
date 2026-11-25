@@ -32,6 +32,24 @@ function Bars({ data, format = String, threshold = null }) {
   </div>
 }
 
+function MonthlyLine({ data, threshold }) {
+  if (!data.length) return <p>No hay datos para mostrar.</p>
+  const max = Math.max(1, threshold, ...data.map(d => d.value))
+  return <div className="aud-rechart" style={{ height: 320 }}>
+    <ResponsiveContainer width="100%" height="100%">
+      <LineChart data={data} margin={{ top: 15, right: 24, bottom: 12, left: 12 }}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+        <YAxis domain={[0, max]} tickFormatter={money} width={100} />
+        <Tooltip formatter={value => [money(value), 'Gasto']} />
+        <ReferenceLine y={threshold} stroke="#c15b48" strokeDasharray="5 4" />
+        <Line type="linear" dataKey="value" stroke="#24658c" strokeWidth={3}
+          dot={({ cx, cy, payload }) => <circle key={payload.key} cx={cx} cy={cy} r={4} fill={payload.value > threshold ? '#c15b48' : '#24658c'} />} />
+      </LineChart>
+    </ResponsiveContainer>
+  </div>
+}
+
 function Pie({ data, format = String, emptyMessage = 'No hay vehículos registrados para calcular porcentajes.' }) {
   // Assign colors before filtering so zero-value categories cannot shift colors.
   const coloredData = data.map((d, i) => ({ ...d, color: colors[i % colors.length] }))
@@ -94,7 +112,7 @@ function DateControls({ start, end, onStart, onEnd }) {
 function validateRange(start, end) {
   return !start || !end || start > end || end > today ? 'Selecciona un intervalo válido que no termine en el futuro.' : ''
 }
-export default function AuditorPanel() {
+export default function AuditorPanel({ isGlobalViewer = false }) {
   const [fuelStart, setFuelStart] = useState(monthsAgo(5))
   const [fuelEnd, setFuelEnd] = useState(today)
   const [fuelThreshold, setFuelThreshold] = useState('1000')
@@ -137,7 +155,7 @@ export default function AuditorPanel() {
       setLoading(true); setError('')
       const { data, error } = await supabase.rpc('auditor_fuel_v2', {
         p_start: fuelStart, p_end: fuelEnd,
-        p_department_id: fuelDepartment === 'all' ? null : Number(fuelDepartment),
+        p_department_id: !isGlobalViewer ? null : fuelDepartment === 'all' ? null : Number(fuelDepartment),
         p_top: fuelTop === 'all' ? null : Number(fuelTop),
       })
       if (!alive) return
@@ -147,7 +165,7 @@ export default function AuditorPanel() {
     }
     loadFuel()
     return () => { alive = false }
-  }, [fuelStart, fuelEnd, fuelDepartment, fuelTop])
+  }, [fuelStart, fuelEnd, fuelDepartment, fuelTop, isGlobalViewer])
 
   // This RPC depends ONLY on the fuel date range, not department, Top N or monetary threshold.
   useEffect(() => {
@@ -212,7 +230,7 @@ export default function AuditorPanel() {
   const period = (fuelData?.fuel_period || []).map(d => ({ key: d.month, label: String(d.month).slice(0, 7), value: Number(d.total) || 0 }))
   const limit = Math.max(0, Number(fuelThreshold) || 0)
   return <div className="auditor-page">
-    <div className="section-heading"><div><h1>Panel del Auditor</h1><p>Análisis de la flota municipal · Acceso exclusivo para visores globales</p></div></div>
+    <div className="section-heading"><div><h1>Panel Analítico</h1><p>Análisis de la flota municipal · {isGlobalViewer ? 'Todos los departamentos' : 'Mi departamento'}</p></div></div>
     {error && <div role="alert" className="admin-alert error">{error}</div>}
     <details className="aud-section" open><summary>1. Departamentos</summary><div className="aud-section-body">
       <div className="aud-card"><h3>Participación de cada departamento en la flota</h3><Pie data={departmentChart} /><p className="aud-note">Se muestran vehículos asignados, no frecuencia real de uso.</p></div>
@@ -220,11 +238,11 @@ export default function AuditorPanel() {
     <details className="aud-section" open><summary>2. Combustible</summary><div className="aud-section-body">
       <div className="aud-controls aud-controls-wide"><DateControls start={fuelStart} end={fuelEnd} onStart={setFuelStart} onEnd={setFuelEnd} />
         <label>Límite de gasto mensual (USD)<input type="number" min="0" step="0.01" value={fuelThreshold} onChange={e => setFuelThreshold(e.target.value)} /></label>
-        <label>Departamento<select value={fuelDepartment} onChange={e => setFuelDepartment(e.target.value)}><option value="all">Todos los departamentos</option>{departments.map(d => <option key={d.id} value={d.id}>{d.name || `Departamento ${d.id}`}</option>)}</select></label>
+        {isGlobalViewer && <label>Departamento<select value={fuelDepartment} onChange={e => setFuelDepartment(e.target.value)}><option value="all">Todos los departamentos</option>{departments.map(d => <option key={d.id} value={d.id}>{d.name || `Departamento ${d.id}`}</option>)}</select></label>}
         <label>Vehículos<select value={fuelTop} onChange={e => setFuelTop(e.target.value)}><option value="all">Todos</option><option value="5">Top 5</option><option value="10">Top 10</option></select></label>
       </div>
       <div className="aud-card aud-card-full">
-        <h3>Distribución de gastos de combustible por departamento</h3>
+        <h3>{isGlobalViewer ? 'Distribución de gastos de combustible por departamento' : 'Gastos de combustible de mi departamento'}</h3>
         {fuelDepartmentsError && <div role="alert" className="admin-alert error">{fuelDepartmentsError}</div>}
         {fuelDepartmentsLoading ? <p role="status">Cargando gastos por departamento…</p> : !fuelDepartmentsError && <>
           <Pie
@@ -241,8 +259,9 @@ export default function AuditorPanel() {
       </div>
       {loading ? <p role="status">Cargando combustible…</p> : fuelData && <>
         <div className="aud-card"><h3>Gasto mensual · período seleccionado</h3><Bars data={period} format={money} threshold={limit} /><p className="aud-note">Meses sobre el límite: {period.filter(d => d.value > limit).map(d => d.label).join(', ') || 'Ninguno'}. Top de vehículos ordenado por gasto total en el período seleccionado.</p></div>
+        <div className="aud-card aud-card-full"><h3>Tendencia mensual de gastos de combustible</h3><MonthlyLine data={period} threshold={limit} /></div>
         <div className="aud-card aud-card-full"><h3>Desviación estándar · últimos 12 meses</h3><p>Promedio mensual (μ): <strong>{money(fuelData.fuel_mean)}</strong> · Desviación estándar (σ): <strong>{money(Math.sqrt(Math.max(0, Number(fuelData.fuel_variance) || 0)))}</strong></p>
-          <StandardDeviationCurve mean={fuelData.fuel_mean} variance={fuelData.fuel_variance} /><p className="aud-note">Se incluyen los meses sin registros como cero. El departamento y Top N se aplican a ambos gráficos; el período de esta curva permanece en los últimos 12 meses.</p></div>
+          <StandardDeviationCurve mean={fuelData.fuel_mean} variance={fuelData.fuel_variance} /><p className="aud-note">Se incluyen los meses sin registros como cero. El departamento y Top N se aplican a los gráficos mensuales y a esta curva; el período de esta curva permanece en los últimos 12 meses.</p></div>
       </>}
     </div></details>
     <details className="aud-section"><summary>3. Registro de llaves</summary><div className="aud-section-body"><div className="aud-controls aud-controls-wide"><DateControls start={keyStart} end={keyEnd} onStart={setKeyStart} onEnd={setKeyEnd} /></div><div className="aud-placeholder">{validateRange(keyStart, keyEnd) || 'Próximamente. No hay gráficos implementados todavía.'}</div></div></details>

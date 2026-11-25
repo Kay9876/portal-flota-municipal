@@ -62,7 +62,7 @@ export default function Homepage({ user, onSignOut }) {
   }, [user.id])
 
   const isAdmin = profile?.is_admin === true && profile?.is_active !== false
-  const isAuditor = profile?.is_global_viewer === true && profile?.is_active === true
+  const isAuditor = profile?.is_active === true
   const displayName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || user?.email || 'Usuario'
   const roleLabel = isAdmin ? 'Administrador' : profile?.is_global_viewer ? 'Visor global' : 'Usuario'
   const sidebarItems = [
@@ -71,7 +71,7 @@ export default function Homepage({ user, onSignOut }) {
   ...(isAuditor
     ? [
         {
-          label: 'Panel Analitico',
+          label: 'Panel Analítico',
           Icon: ChartNoAxesCombined,
           page: 'auditor',
         },
@@ -125,7 +125,7 @@ export default function Homepage({ user, onSignOut }) {
           {profileError && <div className="admin-alert error">No se pudo cargar tu perfil: {profileError}</div>}
           {!profileLoading && !profile && <div className="admin-alert error">No se encontró un perfil para esta cuenta. Contacta al administrador del sistema.</div>}
           {activePage === 'auditor' ? (
-            !profileLoading && isAuditor ? <AuditorPanel /> : <div className="admin-alert error">Acceso restringido a visores globales activos.</div>
+            !profileLoading && isAuditor ? <AuditorPanel key={user.id} isGlobalViewer={profile?.is_global_viewer === true} /> : <div className="admin-alert error">Acceso restringido a usuarios activos.</div>
           ) : activePage === 'users' && isAdmin ? (
             <AdminUsers onBack={() => navigate('home')} />
           ) : showAddVehicle ? (

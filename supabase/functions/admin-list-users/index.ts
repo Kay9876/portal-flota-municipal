@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
   if (callerError || callerProfile?.is_admin !== true || callerProfile.is_active === false) return respond({ error: 'Solo un administrador activo puede consultar usuarios.' }, 403)
 
   const { data: profiles, error: profilesError } = await admin.from('profiles')
-    .select('id,first_name,last_name,second_last_name,department_id,is_admin,is_global_viewer,is_active,created_at')
+    .select('id,first_name,last_name,second_last_name,department_id,is_admin,is_global_viewer,is_director,is_active,created_at')
     .order('created_at', { ascending: false })
   if (profilesError) return respond({ error: `No se pudieron cargar los perfiles: ${profilesError.message}` }, 500)
   const { data: departments, error: departmentsError } = await admin.from('departments').select('id,name').order('name')

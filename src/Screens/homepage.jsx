@@ -50,7 +50,7 @@ export default function Homepage({ user, onSignOut }) {
     async function loadProfile() {
       setProfileLoading(true)
       const { data, error } = await supabase.from('profiles')
-        .select('id,first_name,last_name,second_last_name,department_id,is_admin,is_global_viewer,is_active')
+        .select('id,first_name,last_name,second_last_name,department_id,is_admin,is_global_viewer,is_director,is_active')
         .eq('id', user.id).maybeSingle()
       if (!alive) return
       if (error) setProfileError(error.message)
@@ -62,9 +62,9 @@ export default function Homepage({ user, onSignOut }) {
   }, [user.id])
 
   const isAdmin = profile?.is_admin === true && profile?.is_active !== false
-  const isAuditor = profile?.is_active === true
+  const isAuditor = profile?.is_active === true && (profile?.is_global_viewer === true || profile?.is_director === true)
   const displayName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || user?.email || 'Usuario'
-  const roleLabel = isAdmin ? 'Administrador' : profile?.is_global_viewer ? 'Visor global' : 'Usuario'
+  const roleLabel = isAdmin ? 'Administrador' : profile?.is_global_viewer ? 'Visor global' : profile?.is_director ? 'Director' : 'Usuario'
   const sidebarItems = [
   ...baseSidebarItems,
 
@@ -125,7 +125,7 @@ export default function Homepage({ user, onSignOut }) {
           {profileError && <div className="admin-alert error">No se pudo cargar tu perfil: {profileError}</div>}
           {!profileLoading && !profile && <div className="admin-alert error">No se encontró un perfil para esta cuenta. Contacta al administrador del sistema.</div>}
           {activePage === 'auditor' ? (
-            !profileLoading && isAuditor ? <AuditorPanel key={user.id} isGlobalViewer={profile?.is_global_viewer === true} /> : <div className="admin-alert error">Acceso restringido a usuarios activos.</div>
+            !profileLoading && isAuditor ? <AuditorPanel key={user.id} isGlobalViewer={profile?.is_global_viewer === true} /> : <div className="admin-alert error">Acceso restringido a directores y visores globales activos.</div>
           ) : activePage === 'users' && isAdmin ? (
             <AdminUsers onBack={() => navigate('home')} />
           ) : showAddVehicle ? (

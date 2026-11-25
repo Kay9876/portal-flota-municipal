@@ -65,6 +65,7 @@ Deno.serve(async (req) => {
     department_id: departmentId,
     is_admin: body.is_admin === true,
     is_global_viewer: body.is_global_viewer === true,
+    is_director: body.is_director === true,
     is_active: body.is_active !== false,
   })
     .eq('id', created.user.id)

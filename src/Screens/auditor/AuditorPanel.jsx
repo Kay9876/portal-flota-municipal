@@ -4,6 +4,7 @@ import {
   Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ReferenceLine, ReferenceArea,
 } from 'recharts'
+import { Legend } from 'recharts'
 import { supabase } from '../../supabaseClient'
 import './AuditorPanel.css'
 
@@ -106,6 +107,32 @@ function StandardDeviationCurve({ mean, variance }) {
   </div>
 }
 
+const decSignals = [
+  { key: 'f_age', name: 'Edad', color: '#7e72ac' },
+  { key: 'f_idle', name: 'Sin salidas recientes', color: '#e2a65a' },
+  { key: 'f_mileage', name: 'Millaje alto', color: '#5c8fbd' },
+  { key: 'f_incidents', name: 'Incidentes', color: '#ca7776' },
+  { key: 'f_inactive', name: 'Fuera de servicio', color: '#83a85e' },
+]
+
+function DecomBars({ data }) {
+  if (!data.length) return <p>Ningún vehículo tiene puntos con estos límites.</p>
+  return <div className="aud-rechart" style={{ height: Math.max(260, data.length * 38 + 90) }}>
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={data} layout="vertical" margin={{ top: 15, right: 24, bottom: 12, left: 5 }}>
+        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+        <XAxis type="number" domain={[0, 5]} ticks={[0, 1, 2, 3, 4, 5]} allowDecimals={false} tick={{ fontSize: 11 }} />
+        <YAxis type="category" dataKey="label" width={150} tick={{ fontSize: 12 }} interval={0} tickFormatter={label => label.length > 22 ? label.slice(0, 21) + '…' : label} />
+        <Tooltip formatter={value => [value ? 'Sí' : 'No']} />
+        <Legend />
+        {decSignals.map(signal => <Bar key={signal.key} dataKey={signal.key} name={signal.name} stackId="score" fill={signal.color} maxBarSize={24} />)}
+      </BarChart>
+    </ResponsiveContainer>
+  </div>
+}
+
+
+
 function DateControls({ start, end, onStart, onEnd }) {
   return <><label>Desde<input type="date" value={start} max={today} onChange={e => onStart(e.target.value)} /></label><label>Hasta<input type="date" value={end} max={today} onChange={e => onEnd(e.target.value)} /></label></>
 }
@@ -133,6 +160,13 @@ export default function AuditorPanel({ isGlobalViewer = false }) {
   const [maintenanceError, setMaintenanceError] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [decAge, setDecAge] = useState('10')
+  const [decIdle, setDecIdle] = useState('60')
+  const [decMileage, setDecMileage] = useState('150000')
+  const [decTop, setDecTop] = useState('20')
+  const [decData, setDecData] = useState(null)
+  const [decLoading, setDecLoading] = useState(false)
+  const [decError, setDecError] = useState('')
 
   // Department counts do not depend on any category's filters.
   useEffect(() => {
@@ -226,9 +260,45 @@ export default function AuditorPanel({ isGlobalViewer = false }) {
     return () => { alive = false }
   }, [maintenanceStart, maintenanceEnd])
 
+useEffect(() => {
+    let alive = true
+    const age = Math.trunc(Number(decAge))
+    const idle = Math.trunc(Number(decIdle))
+    const mileage = Math.trunc(Number(decMileage))
+    if (!(age >= 1 && age <= 100 && idle >= 1 && idle <= 3650 && mileage >= 1 && mileage <= 10000000)) {
+      setDecError('Revisa los límites: años entre 1 y 100, días entre 1 y 3650 y millaje entre 1 y 10,000,000.')
+      setDecData(null)
+      setDecLoading(false)
+      return () => { alive = false }
+    }
+    async function loadDecommission() {
+      setDecLoading(true)
+      setDecError('')
+      const { data, error } = await supabase.rpc('auditor_decommission_candidates', {
+        p_age_years: age,
+        p_idle_days: idle,
+        p_mileage: mileage,
+        p_top: Number(decTop),
+      })
+      if (!alive) return
+      if (error) {
+        setDecError(error.message)
+        setDecData(null)
+      } else {
+        setDecData(data)
+      }
+      setDecLoading(false)
+    }
+    loadDecommission()
+    return () => { alive = false }
+  }, [decAge, decIdle, decMileage, decTop])
+
+
   const departmentChart = departments.map(d => ({ key: d.id, label: d.name || `Departamento ${d.id}`, value: Number(d.count) || 0 }))
   const period = (fuelData?.fuel_period || []).map(d => ({ key: d.month, label: String(d.month).slice(0, 7), value: Number(d.total) || 0 }))
   const limit = Math.max(0, Number(fuelThreshold) || 0)
+  const decCandidates = decData?.candidates || []
+  const decName = v => [v.manufacturer, v.model].map(x => (x || '').trim()).filter(Boolean).join(' ') || `Vehículo ${v.id}`
   return <div className="auditor-page">
     <div className="section-heading"><div><h1>Panel Analítico</h1><p>Análisis de la flota municipal · {isGlobalViewer ? 'Todos los departamentos' : 'Mi departamento'}</p></div></div>
     {error && <div role="alert" className="admin-alert error">{error}</div>}
@@ -271,5 +341,34 @@ export default function AuditorPanel({ isGlobalViewer = false }) {
         <Pie data={(maintenanceData || []).map(d => ({ key: d.status, label: d.label, value: Number(d.count) || 0 }))} emptyMessage="No hay solicitudes de mantenimiento en el período seleccionado." />
         <p className="aud-note">Se cuentan solicitudes creadas entre las fechas seleccionadas según su estado actual. «Cerrada» incluye solicitudes completadas y canceladas. El límite de gasto mensual no afecta este gráfico.</p>
       </div>}</div></details>
+        <details className="aud-section"><summary>5. Candidatos a reemplazo</summary><div className="aud-section-body">
+      <div className="aud-controls aud-controls-wide">
+        <label>Edad mínima (años)<input type="number" min="1" max="100" step="1" value={decAge} onChange={e => setDecAge(e.target.value)} /></label>
+        <label>Días sin salidas<input type="number" min="1" max="3650" step="1" value={decIdle} onChange={e => setDecIdle(e.target.value)} /></label>
+        <label>Millaje alto<input type="number" min="1" max="10000000" step="1000" value={decMileage} onChange={e => setDecMileage(e.target.value)} /></label>
+        <label>Vehículos<select value={decTop} onChange={e => setDecTop(e.target.value)}><option value="10">Top 10</option><option value="20">Top 20</option><option value="50">Top 50</option></select></label>
+      </div>
+      {decError && <div role="alert" className="admin-alert error">{decError}</div>}
+      {decLoading ? <p role="status">Cargando candidatos…</p> : !decError && decData && <div className="aud-card aud-card-full">
+        <h3>Vehículos candidatos a revisión para reemplazo</h3>
+        {decCandidates.length === 0
+          ? <p>Ningún vehículo tiene puntos con estos límites.</p>
+          : <div className="aud-table-wrap"><table className="aud-table">
+            <thead><tr><th>Vehículo</th><th>Departamento</th><th>Edad</th><th>Millaje</th><th>Última salida</th><th>Incidentes (12 meses)</th><th>Estado</th><th>Puntos</th></tr></thead>
+            <tbody>{decCandidates.map(v => <tr key={v.id}>
+              <td><strong>{decName(v)}</strong></td>
+              <td>{v.department || '—'}</td>
+              <td className={v.f_age ? 'aud-flag' : ''}>{v.age_years === null ? 'Sin dato' : `${v.age_years} años (${v.year})`}</td>
+              <td className={v.f_mileage ? 'aud-flag' : ''}>{v.mileage === null ? 'Sin dato' : `${Number(v.mileage).toLocaleString('en-US')} millas`}</td>
+              <td className={v.f_idle ? 'aud-flag' : ''}>{v.last_trip || 'Sin salidas'}</td>
+              <td className={v.f_incidents ? 'aud-flag' : ''}>{v.incidents}</td>
+              <td className={v.f_inactive ? 'aud-flag' : ''}>{v.is_active === false ? 'Inactivo' : 'Activo'}</td>
+              <td><strong>{v.score}</strong> / 5</td>
+            </tr>)}</tbody>
+          </table></div>}
+        <p className="aud-note">Las celdas resaltadas son las señales que suman un punto (máximo 5). Se muestran {decCandidates.length} de {decData.with_points} vehículos con puntos, de {decData.total_vehicles} en total. Un vehículo sin datos para una señal no recibe puntos por ella: {decData.without_trips} no tienen salidas registradas y {decData.without_mileage} no tienen millaje. Es una lista para revisar, no una decisión de baja.</p>
+      </div>}</div></details>
+
+
   </div>
 }

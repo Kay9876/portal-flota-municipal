@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
     department_id: departmentId,
     is_admin: body.is_admin === true,
     is_global_viewer: body.is_global_viewer === true,
+    ...(typeof body.is_director === 'boolean' ? { is_director: body.is_director } : {}),
     is_active: body.is_active !== false,
   }
   const { error: profileUpdateError } = await admin.from('profiles').update(profileUpdate).eq('id', userId)

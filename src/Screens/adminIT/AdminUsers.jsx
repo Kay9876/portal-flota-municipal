@@ -4,7 +4,7 @@ import { supabase } from '../../supabaseClient'
 
 const blankForm = {
   first_name: '', last_name: '', second_last_name: '', email: '', password: '',
-  department_id: '', is_admin: false, is_global_viewer: false, is_active: true,
+  department_id: '', is_admin: false, is_global_viewer: false, is_director: false, is_active: true,
   can_view_vehicle: false, can_create_vehicle: false, can_update_vehicle: false,
 }
 
@@ -73,7 +73,7 @@ export default function AdminUsers({ onBack }) {
       first_name: user.first_name || '', last_name: user.last_name || '',
       second_last_name: user.second_last_name || '', email: user.email || '',
       department_id: user.department_id == null ? '' : String(user.department_id),
-      is_admin: user.is_admin === true, is_global_viewer: user.is_global_viewer === true,
+      is_admin: user.is_admin === true, is_global_viewer: user.is_global_viewer === true, is_director: user.is_director === true,
       is_active: user.is_active !== false,
       can_view_vehicle: user.permission?.can_view_vehicle === true,
       can_create_vehicle: user.permission?.can_create_vehicle === true,
@@ -100,7 +100,7 @@ export default function AdminUsers({ onBack }) {
         first_name: form.first_name.trim(), last_name: form.last_name.trim(),
         second_last_name: form.second_last_name.trim(), email: form.email.trim().toLowerCase(),
         department_id: form.department_id || null, is_admin: form.is_admin,
-        is_global_viewer: form.is_global_viewer, is_active: form.is_active,
+        is_global_viewer: form.is_global_viewer, is_director: form.is_director, is_active: form.is_active,
         can_view_vehicle: form.can_view_vehicle, can_create_vehicle: form.can_create_vehicle,
         can_update_vehicle: form.can_update_vehicle,
       }
@@ -162,7 +162,7 @@ export default function AdminUsers({ onBack }) {
                   return <tr key={user.id}>
                     <td><div className="admin-user-cell"><span className="admin-user-avatar">{name.slice(0, 2).toUpperCase()}</span><div><strong>{name}</strong><small>{user.id.slice(0, 8)}…</small></div></div></td>
                     <td>{user.email || '—'}</td><td>{departmentName[String(user.department_id)] || 'Sin departamento'}</td>
-                    <td><span className={`admin-role ${user.is_admin ? 'administrator' : ''}`}>{user.is_admin ? 'Administrador' : user.is_global_viewer ? 'Visor global' : 'Usuario'}</span></td>
+                    <td><span className={`admin-role ${user.is_admin ? 'administrator' : ''}`}>{user.is_admin ? 'Administrador' : user.is_global_viewer ? 'Visor global' : user.is_director ? 'Director' : 'Usuario'}</span></td>
                     <td><span className={`admin-state ${user.is_active === false ? 'inactive' : 'active'}`}>{user.is_active === false ? 'Inactivo' : 'Activo'}</span></td>
                     <td><button className="admin-icon-button" type="button" onClick={() => startEdit(user)} aria-label={`Editar ${name}`} title="Editar usuario"><Pencil size={17} /></button></td>
                   </tr>
@@ -188,6 +188,7 @@ export default function AdminUsers({ onBack }) {
           <div className="admin-checkbox-grid">
             <label className="admin-check"><input type="checkbox" name="is_admin" checked={form.is_admin} onChange={updateField} /><span><strong>Administrador del sistema</strong><small>Puede administrar usuarios y permisos.</small></span></label>
             <label className="admin-check"><input type="checkbox" name="is_global_viewer" checked={form.is_global_viewer} onChange={updateField} /><span><strong>Visor global</strong><small>Puede ver información de todos los departamentos según las políticas de la base de datos.</small></span></label>
+            <label className="admin-check"><input type="checkbox" name="is_director" checked={form.is_director} onChange={updateField} /><span><strong>Director</strong><small>Puede acceder al Panel Analítico de su departamento.</small></span></label>
             <label className="admin-check"><input type="checkbox" name="is_active" checked={form.is_active} onChange={updateField} /><span><strong>Cuenta activa</strong><small>Las cuentas inactivas deben bloquearse también en las políticas de acceso.</small></span></label>
           </div>
 

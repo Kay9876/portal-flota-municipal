@@ -321,8 +321,7 @@ export default function Homepage({ user, onSignOut }) {
     async function loadProfile() {
       setProfileLoading(true)
       const { data, error } = await supabase.from('profiles')
-        .select('id,first_name,last_name,second_last_name,department_id,is_admin,is_global_viewer,is_mechanic,is_active')
-        .select('id,first_name,last_name,second_last_name,department_id,is_admin,is_global_viewer,is_director,is_active')
+        .select('id,first_name,last_name,second_last_name,department_id,is_admin,is_global_viewer,is_mechanic,is_director,is_active')
         .eq('id', user.id).maybeSingle()
       if (!alive) return
       if (error) setProfileError(error.message)

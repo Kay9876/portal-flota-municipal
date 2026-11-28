@@ -2,9 +2,8 @@ import { useEffect, useState } from 'react'
 import {
   ResponsiveContainer, BarChart, Bar, PieChart, Pie as RechartsPie,
   Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ReferenceLine, ReferenceArea,
+  ReferenceLine, ReferenceArea, Legend, 
 } from 'recharts'
-import { Legend } from 'recharts'
 import { supabase } from '../../supabaseClient'
 import './AuditorPanel.css'
 
@@ -107,25 +106,58 @@ function StandardDeviationCurve({ mean, variance }) {
   </div>
 }
 
-const decSignals = [
-  { key: 'f_age', name: 'Edad', color: '#7e72ac' },
-  { key: 'f_idle', name: 'Sin salidas recientes', color: '#e2a65a' },
-  { key: 'f_mileage', name: 'Millaje alto', color: '#5c8fbd' },
-  { key: 'f_incidents', name: 'Incidentes', color: '#ca7776' },
-  { key: 'f_inactive', name: 'Fuera de servicio', color: '#83a85e' },
-]
 
-function DecomBars({ data }) {
-  if (!data.length) return <p>Ningún vehículo tiene puntos con estos límites.</p>
-  return <div className="aud-rechart" style={{ height: Math.max(260, data.length * 38 + 90) }}>
+
+const monthNames = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+const monthLabel = iso => { const [y, m] = String(iso).split('-'); return `${monthNames[Number(m) - 1]} ${y}` }
+const keyVehicleName = v => [v.manufacturer, v.model].map(x => (x || '').trim()).filter(Boolean).join(' ') || `Vehículo ${v.id}`
+const hoursText = h => h == null ? '—' : `${Number(h).toLocaleString('es-PR', { maximumFractionDigits: 1 })} h`
+
+
+function KeysLoansLine({ data }) {
+  if (!data.length) return <p>No hay datos para mostrar.</p>
+  return <div className="aud-rechart" style={{ height: 300 }}>
+    <ResponsiveContainer width="100%" height="100%">
+      <LineChart data={data} margin={{ top: 15, right: 24, bottom: 12, left: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+        <YAxis allowDecimals={false} width={40} />
+        <Tooltip formatter={value => [value, 'Préstamos']} />
+        <Line type="linear" dataKey="total" name="Préstamos" stroke="#24658c" strokeWidth={3} dot={{ r: 4 }} />
+      </LineChart>
+    </ResponsiveContainer>
+  </div>
+}
+
+function KeysControlLine({ data }) {
+  if (!data.length) return <p>No hay datos para mostrar.</p>
+  return <div className="aud-rechart" style={{ height: 300 }}>
+    <ResponsiveContainer width="100%" height="100%">
+      <LineChart data={data} margin={{ top: 15, right: 24, bottom: 12, left: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+        <YAxis allowDecimals={false} width={40} />
+        <Tooltip />
+        <Legend />
+        <Line type="linear" dataKey="unknown_return" name="Devolución desconocida" stroke="#c15b48" strokeWidth={3} dot={{ r: 4 }} />
+        <Line type="linear" dataKey="no_signature" name="Sin firma" stroke="#e2a65a" strokeWidth={3} dot={{ r: 4 }} />
+      </LineChart>
+    </ResponsiveContainer>
+  </div>
+}
+
+function KeysDepartmentBars({ data }) {
+  if (!data.length) return <p>No hay datos para mostrar.</p>
+  return <div className="aud-rechart" style={{ height: Math.max(220, data.length * 38 + 65) }}>
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data} layout="vertical" margin={{ top: 15, right: 24, bottom: 12, left: 5 }}>
         <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-        <XAxis type="number" domain={[0, 5]} ticks={[0, 1, 2, 3, 4, 5]} allowDecimals={false} tick={{ fontSize: 11 }} />
-        <YAxis type="category" dataKey="label" width={150} tick={{ fontSize: 12 }} interval={0} tickFormatter={label => label.length > 22 ? label.slice(0, 21) + '…' : label} />
-        <Tooltip formatter={value => [value ? 'Sí' : 'No']} />
-        <Legend />
-        {decSignals.map(signal => <Bar key={signal.key} dataKey={signal.key} name={signal.name} stackId="score" fill={signal.color} maxBarSize={24} />)}
+        <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
+        <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 12 }} interval={0} />
+        <Tooltip formatter={value => [value, 'Préstamos']} />
+        <Bar dataKey="total" name="Préstamos" radius={[0, 4, 4, 0]} maxBarSize={24}>
+          {data.map((item, i) => <Cell key={item.id} fill={colors[i % colors.length]} />)}
+        </Bar>
       </BarChart>
     </ResponsiveContainer>
   </div>
@@ -167,6 +199,13 @@ export default function AuditorPanel({ isGlobalViewer = false }) {
   const [decData, setDecData] = useState(null)
   const [decLoading, setDecLoading] = useState(false)
   const [decError, setDecError] = useState('')
+  const [keysData, setKeysData] = useState(null)
+  const [keysLoading, setKeysLoading] = useState(false)
+  const [keysError, setKeysError] = useState('')
+  const [usageTop, setUsageTop] = useState('10')
+  const [usageData, setUsageData] = useState(null)
+  const [usageLoading, setUsageLoading] = useState(false)
+  const [usageError, setUsageError] = useState('')
 
   // Department counts do not depend on any category's filters.
   useEffect(() => {
@@ -230,6 +269,42 @@ export default function AuditorPanel({ isGlobalViewer = false }) {
     loadFuelDepartments()
     return () => { alive = false }
   }, [fuelStart, fuelEnd])
+
+
+
+  useEffect(() => {
+    let alive = true
+    const validationError = validateRange(keyStart, keyEnd)
+    if (validationError) { setKeysError(validationError); setKeysData(null); setKeysLoading(false); return }
+    async function loadKeys() {
+      setKeysLoading(true); setKeysError('')
+      const { data, error } = await supabase.rpc('auditor_keys', { p_start: keyStart, p_end: keyEnd })
+      if (!alive) return
+      if (error) { setKeysError(error.message); setKeysData(null) }
+      else setKeysData(data)
+      setKeysLoading(false)
+    }
+    loadKeys()
+    return () => { alive = false }
+  }, [keyStart, keyEnd])
+
+    useEffect(() => {
+    let alive = true
+    const validationError = validateRange(keyStart, keyEnd)
+    if (validationError) { setUsageError(validationError); setUsageData(null); setUsageLoading(false); return }
+    async function loadUsage() {
+      setUsageLoading(true); setUsageError('')
+      const { data, error } = await supabase.rpc('auditor_keys_usage', {
+        p_start: keyStart, p_end: keyEnd, p_top: Number(usageTop),
+      })
+      if (!alive) return
+      if (error) { setUsageError(error.message); setUsageData(null) }
+      else setUsageData(data)
+      setUsageLoading(false)
+    }
+    loadUsage()
+    return () => { alive = false }
+  }, [keyStart, keyEnd, usageTop])
 
   useEffect(() => {
     let alive = true
@@ -334,7 +409,59 @@ useEffect(() => {
           <StandardDeviationCurve mean={fuelData.fuel_mean} variance={fuelData.fuel_variance} /><p className="aud-note">Se incluyen los meses sin registros como cero. El departamento y Top N se aplican a los gráficos mensuales y a esta curva; el período de esta curva permanece en los últimos 12 meses.</p></div>
       </>}
     </div></details>
-    <details className="aud-section"><summary>3. Registro de llaves</summary><div className="aud-section-body"><div className="aud-controls aud-controls-wide"><DateControls start={keyStart} end={keyEnd} onStart={setKeyStart} onEnd={setKeyEnd} /></div><div className="aud-placeholder">{validateRange(keyStart, keyEnd) || 'Próximamente. No hay gráficos implementados todavía.'}</div></div></details>
+        <details className="aud-section"><summary>3. Registro de llaves</summary><div className="aud-section-body">
+      <div className="aud-controls aud-controls-wide"><DateControls start={keyStart} end={keyEnd} onStart={setKeyStart} onEnd={setKeyEnd} /></div>
+      {keysError && <p role="alert">{keysError}</p>}
+      {keysLoading ? <p role="status">Cargando registro de llaves…</p> : !keysError && keysData && <>
+        <div className="aud-card aud-card-full">
+          <h3>Préstamos de llaves por mes</h3>
+          <KeysLoansLine data={(keysData.loans_by_month || []).map(m => ({ ...m, label: monthLabel(m.month) }))} />
+        </div>
+        <div className="aud-card aud-card-full">
+          <h3>Préstamos con devolución desconocida o sin firma por mes</h3>
+          <KeysControlLine data={(keysData.control_by_month || []).map(m => ({ ...m, label: monthLabel(m.month) }))} />
+          <p className="aud-note">«Devolución desconocida» son llaves guardadas sin hora de devolución. «Sin firma» son préstamos sin firma registrada. Un mismo préstamo puede contar en ambas líneas.</p>
+        </div>
+        {isGlobalViewer && <div className="aud-card aud-card-full">
+          <h3>Préstamos de llaves por departamento</h3>
+          <KeysDepartmentBars data={keysData.by_department || []} />
+        </div>}
+      </>}
+      <div className="aud-controls">
+        <label>Mostrar<select value={usageTop} onChange={e => setUsageTop(e.target.value)}>
+          <option value="10">Top 10</option><option value="20">Top 20</option><option value="50">Top 50</option>
+        </select></label>
+      </div>
+      {usageError && <p role="alert">{usageError}</p>}
+      {usageLoading ? <p role="status">Cargando uso de llaves…</p> : !usageError && usageData && <>
+        <div className="aud-card aud-card-full">
+          <h3>Uso de llaves por vehículo</h3>
+          {!(usageData.vehicles || []).length ? <p>No hay préstamos en este intervalo.</p> : <div className="aud-table-wrap"><table className="aud-table">
+            <thead><tr><th>Vehículo</th><th>Tablilla</th><th>Departamento</th><th>Préstamos</th><th>Horas totales</th><th>Promedio</th><th>Devolución desconocida</th><th>Sin firma</th><th>Último préstamo</th></tr></thead>
+            <tbody>{usageData.vehicles.map(v => <tr key={v.id}>
+              <td>{keyVehicleName(v)}{v.year ? ` (${v.year})` : ''}</td><td>{v.plate || '—'}</td><td>{v.department || '—'}</td>
+              <td>{v.loans}</td><td>{hoursText(v.total_hours)}</td><td>{hoursText(v.avg_hours)}</td>
+              <td className={v.unknown_return > 0 ? 'aud-flag' : ''}>{v.unknown_return}</td>
+              <td className={v.no_signature > 0 ? 'aud-flag' : ''}>{v.no_signature}</td>
+              <td>{v.last_loan}</td>
+            </tr>)}</tbody>
+          </table></div>}
+        </div>
+        <div className="aud-card aud-card-full">
+          <h3>Uso de llaves por conductor</h3>
+          {!(usageData.drivers || []).length ? <p>No hay préstamos en este intervalo.</p> : <div className="aud-table-wrap"><table className="aud-table">
+            <thead><tr><th>Conductor</th><th>Préstamos</th><th>Vehículos distintos</th><th>Horas totales</th><th>Promedio</th><th>Devolución desconocida</th><th>Sin firma</th><th>Último préstamo</th></tr></thead>
+            <tbody>{usageData.drivers.map(d => <tr key={d.driver}>
+              <td>{d.driver || '—'}</td><td>{d.loans}</td><td>{d.vehicles}</td>
+              <td>{hoursText(d.total_hours)}</td><td>{hoursText(d.avg_hours)}</td>
+              <td className={d.unknown_return > 0 ? 'aud-flag' : ''}>{d.unknown_return}</td>
+              <td className={d.no_signature > 0 ? 'aud-flag' : ''}>{d.no_signature}</td>
+              <td>{d.last_loan}</td>
+            </tr>)}</tbody>
+          </table></div>}
+        </div>
+      </>}
+    </div></details>
     <details className="aud-section"><summary>4. Mantenimiento</summary><div className="aud-section-body"><div className="aud-controls aud-controls-wide"><DateControls start={maintenanceStart} end={maintenanceEnd} onStart={setMaintenanceStart} onEnd={setMaintenanceEnd} /><label>Límite de gasto mensual (USD)<input type="number" min="0" step="0.01" value={maintenanceThreshold} onChange={e => setMaintenanceThreshold(e.target.value)} /></label></div>{maintenanceError && <div role="alert" className="admin-alert error">{maintenanceError}</div>}
       {maintenanceLoading ? <p role="status">Cargando mantenimiento…</p> : !maintenanceError && <div className="aud-card aud-card-full">
         <h3>Estado de solicitudes de mantenimiento</h3>

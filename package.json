@@ -21,7 +21,9 @@
   "homepage": "https://github.com/Kay9876/portal-flota-municipal#readme",
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",
+    "html5-qrcode": "^2.3.8",
     "lucide-react": "^1.59.0",
+    "qrcode": "^1.5.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "recharts": "^3.11.1"

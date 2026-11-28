@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   CarFront, TriangleAlert, Wrench, ClipboardList, Fuel, House,
   Building2, CalendarDays, KeyRound, ChartNoAxesCombined, Users, Settings, LogOut,
-  AlertCircle, Loader2, 
+  AlertCircle, Loader2,
+  ScanLine, 
 } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
@@ -18,6 +19,8 @@ import AuditorPanel from './auditor/AuditorPanel'
 import AddDailyLog from './addDailyLog'
 import ReportIssue from './reportIssue'
 import KeyControl from './keyControl'
+import KeyLabels from './keyLabels'
+import KeyKiosk from './keyKiosk'
 import IncidentReport from './incidentReport'
 import { getDepartmentOptions } from '../utils/vehicleList'
 import {
@@ -48,7 +51,7 @@ const quickActions = [
   { label: 'Registrar combustible', Icon: Fuel, page: 'addFuel' },
   { label: 'Registrar mantenimiento', Icon: Wrench, page: 'reportIssue' },
   { label: 'Registrar incidente', Icon: TriangleAlert, page: 'incidentReport' },
-  { label: 'Entregar ó Recibir Llaves', Icon: KeyRound, page: 'keys'}
+  { label: 'Entregar ó Recibir Llaves', Icon: ScanLine, page: 'keyKiosk' },
 ]
 
 
@@ -321,7 +324,7 @@ export default function Homepage({ user, onSignOut }) {
     async function loadProfile() {
       setProfileLoading(true)
       const { data, error } = await supabase.from('profiles')
-        .select('id,first_name,last_name,second_last_name,department_id,is_admin,is_global_viewer,is_mechanic,is_active')
+        .select('id,first_name,last_name,second_last_name,department_id,is_admin,is_global_viewer,is_mechanic,is_active,is_kiosk')
         .eq('id', user.id).maybeSingle()
       if (!alive) return
       if (error) setProfileError(error.message)
@@ -354,6 +357,7 @@ export default function Homepage({ user, onSignOut }) {
         { label: 'Usuarios', Icon: Users, page: 'users' },
         { label: 'Departamentos', Icon: Building2, page: 'departments' },
         { label: 'Configuración', Icon: Settings, page: 'settings' },
+        {label: 'Etiquetas de llaves QR', Icon: KeyRound, page: 'keyLabels'},
       ]
     : []),
 ]
@@ -364,6 +368,10 @@ export default function Homepage({ user, onSignOut }) {
     setShowAddVehicle(false)
     setProfileError('')
     setSelectedVehicleId(null)
+  }
+
+  if(!profileLoading && profile?.is_kiosk){
+    return <div className="page-content"><KeyKiosk onDone={onSignOut}/></div>
   }
 
   return (
@@ -417,6 +425,10 @@ export default function Homepage({ user, onSignOut }) {
             <IncidentReport user={user} profile={profile} onDone={()=>navigate('home')}/>
           ): activePage==='keys'?(
             <KeyControl onDone={()=>navigate('home')}/>
+          ): activePage==='keyKiosk'?(
+            <KeyKiosk onDone={()=>navigate('home')}/>
+          ): activePage==='keyLabels' && isAdmin?(
+            <KeyLabels onDone={()=>navigate('home')}/>
           ): activePage=== 'vehicles'?(
           selectedVehicleId!==null?(
             <ViewVehicleInfo 

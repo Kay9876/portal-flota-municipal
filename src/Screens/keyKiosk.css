@@ -1,0 +1,54 @@
+.kk { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.kk-head { display: flex; justify-content: space-between; align-items: center; }
+.kk-head h1 { display: flex; align-items: center; gap: 10px; margin: 0; color: #0f3a5c; font-size: 32px; }
+.kk-card { display: flex; flex-direction: column; gap: 14px; padding: 24px; }
+.kk-card h2 { margin: 0; font-size: 26px; color: #0f3a5c; }
+.kk-sub { margin: -8px 0 0; color: #5b6573; font-size: 16px; }
+.kk-msg { font-size: 17px; }
+
+.kk-scanner { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+#kk-reader { width: 100%; max-width: 420px; border-radius: 12px; overflow: hidden; background: #0f1f2d; min-height: 240px; }
+.kk-cam-error { color: #b42318; font-size: 15px; text-align: center; margin: 0; }
+
+.kk-manual label { display: block; font-weight: 600; margin-bottom: 6px; color: #34404c; }
+.kk-manual-row { display: flex; gap: 10px; }
+.kk-manual-row input { flex: 1; min-height: 52px; font-size: 20px; letter-spacing: .05em; border: 1px solid #cfd6de; border-radius: 10px; padding: 0 14px; }
+
+.kk-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.kk-card input, .kk-card select { min-height: 52px; font-size: 18px; }
+.kk-confirm { display: flex; align-items: center; gap: 12px; font-size: 18px; font-weight: 600; padding: 12px; background: #f4f6f8; border-radius: 10px; cursor: pointer; }
+.kk-confirm input { width: 26px; height: 26px; }
+
+.kk-actions { display: flex; gap: 12px; justify-content: space-between; flex-wrap: wrap; }
+.kk-actions .av-btn { min-height: 56px; font-size: 18px; padding: 0 22px; }
+.kk-big { min-height: 64px !important; font-size: 20px !important; flex: 1; justify-content: center; }
+
+.kk-badge { margin: 0; align-self: flex-start; padding: 6px 12px; border-radius: 999px; font-weight: 700; font-size: 14px; letter-spacing: .04em; }
+.kk-out { background: #e5f1ff; color: #0b5cad; }
+.kk-in { background: #e3f6e8; color: #1f6b45; }
+.kk-loan { font-size: 20px; margin: 0; }
+
+.kk-done { align-items: center; text-align: center; color: #16a34a; padding: 48px 24px; }
+.kk-done h2 { color: #0f3a5c; }
+
+@media (max-width: 700px) { .kk-grid { grid-template-columns: 1fr; } }
+
+.kk .av-btn-primary { background: #0f3a5c; color: #fff; border: 1px solid #0f3a5c; }
+.kk .av-btn-primary:disabled { opacity: .6; }
+.kk-sign { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; }
+.kk-sign canvas { width: 100%; height: 180px; border: 2px dashed #9aa5b1; border-radius: 10px; background: #fff; touch-action: none; }
+.kk-sign button { align-self: flex-start; }
+
+.kl-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.kl-head h1 { margin: 0; color: #0f3a5c; }
+.kl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.kl-label { border: 1px dashed #9aa5b1; border-radius: 8px; padding: 8px; display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; break-inside: avoid; }
+.kl-label img { width: 120px; height: 120px; }
+.kl-label strong { font-size: 16px; letter-spacing: .05em; }
+.kl-label span { font-size: 11px; color: #5b6573; }
+@media print {
+  .no-print, .sidebar, .page-header { display: none !important; }
+  .main-content, .page-content { padding: 0 !important; margin: 0 !important; }
+  .kl-grid { grid-template-columns: repeat(4, 1fr); }
+  .kl-label img { width: 3cm; height: 3cm; }
+}
